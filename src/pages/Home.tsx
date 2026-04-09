@@ -29,7 +29,9 @@ const NOTICES = [
 
 const Home = () => {
   const navigate = useNavigate();
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    return localStorage.getItem("home_prompt_dismissed") === "true";
+  });
 
   const contract = useMemo(() => {
     try {
@@ -137,14 +139,14 @@ const Home = () => {
         ) : !dismissed ? (
           <div className="rounded-[18px] px-5 py-5 bg-blue-50 border border-blue-100 space-y-3">
             <p className="text-2xl">🏠</p>
-            <p className="text-sm font-bold text-foreground">내 단지 정보를 등록해보세요</p>
-            <p className="text-xs text-muted-foreground">맞춤 대출 계산·납부 현황 관리가 가능합니다</p>
+            <p className="text-sm font-bold text-foreground">내 아파트 정보를 등록하면</p>
+            <p className="text-xs text-muted-foreground">맞춤 계산이 더 정확해져요</p>
             <div className="flex items-center gap-3 pt-1">
               <Button size="sm" onClick={() => navigate("/contract-info")}>
-                지금 등록하기
+                정보 등록하기
               </Button>
               <button
-                onClick={() => setDismissed(true)}
+                onClick={() => { setDismissed(true); localStorage.setItem("home_prompt_dismissed", "true"); }}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 나중에

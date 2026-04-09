@@ -69,7 +69,8 @@ const Login = () => {
 
   const handleVerify = () => {
     localStorage.setItem("auth_token", "demo_token");
-    navigate("/onboarding", { replace: true });
+    const done = localStorage.getItem("onboarding_done");
+    navigate(done ? "/home" : "/onboarding", { replace: true });
   };
 
   const mm = String(Math.floor(timer / 60)).padStart(2, "0");

@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 const slides = [
   {
     icon: "🏦",
-    title: "내 상황에 맞는\n잔금대출 한도 계산",
-    desc: "LTV·DSR 기준으로 실제 대출\n가능 금액을 바로 확인하세요",
+    title: "잔금대출 한도\n지금 바로 계산해보세요",
+    desc: "분양가·소득·신용등급 입력하면\nLTV·DSR 기준 예상 한도를 알려드립니다",
   },
   {
     icon: "💰",
@@ -15,8 +15,8 @@ const slides = [
   },
   {
     icon: "🤝",
-    title: "협약 은행에\n바로 연결",
-    desc: "KB·신한·하나·우리·농협\n전담 담당자가 상담해드립니다",
+    title: "협약 은행에\n바로 연결해드립니다",
+    desc: "KB·신한·하나·우리·농협\n전담 담당자가 직접 상담해드립니다",
   },
 ];
 
@@ -27,7 +27,10 @@ const Onboarding = () => {
 
   const goNext = () => {
     if (current < slides.length - 1) setCurrent(current + 1);
-    else navigate("/home", { replace: true });
+    else {
+      localStorage.setItem("onboarding_done", "true");
+      navigate("/home", { replace: true });
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);
@@ -46,7 +49,7 @@ const Onboarding = () => {
       {/* Skip */}
       {current < slides.length - 1 && (
         <button
-          onClick={() => navigate("/contract-info", { replace: true })}
+          onClick={() => { localStorage.setItem("onboarding_done", "true"); navigate("/home", { replace: true }); }}
           className="absolute top-6 right-6 text-sm text-muted-foreground z-10"
         >
           건너뛰기
