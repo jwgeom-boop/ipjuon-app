@@ -121,11 +121,27 @@ const ContractInfo = () => {
 
   const step1Valid = danjiName && dong && ho && price > 0 && moveInDate;
 
+  const handleSkipStep2 = () => {
+    const info = {
+      danjiName, dong, ho, price, moveInDate, balanceDate,
+      contractAmt: 0, contractPaid: false, midPayments: [], midMethod: "direct",
+      balanceAmt: price, options: [],
+    };
+    localStorage.setItem("contractInfo", JSON.stringify(info));
+    navigate("/home", { replace: true });
+  };
+
   return (
     <div className="app-shell min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border px-6 pt-6 pb-4">
-        <h1 className="text-lg font-bold text-foreground mb-4">내 계약 정보 입력</h1>
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground text-sm">
+            ← 뒤로
+          </button>
+        </div>
+        <h1 className="text-lg font-bold text-foreground mb-1">내 계약 정보 입력</h1>
+        <p className="text-xs text-muted-foreground mb-4">등록하면 맞춤 계산이 가능해요</p>
         {/* Progress bar */}
         <div className="flex gap-2">
           <div className="flex-1">
@@ -405,6 +421,12 @@ const ContractInfo = () => {
                 등록 완료
               </Button>
             </div>
+            <button
+              onClick={handleSkipStep2}
+              className="w-full text-center text-sm text-muted-foreground py-2 hover:text-foreground transition-colors"
+            >
+              나중에 입력하기
+            </button>
           </div>
         )}
       </div>

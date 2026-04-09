@@ -1,6 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import BottomTabBar from "@/components/BottomTabBar";
 
 const toEok = (manwon: number) => {
@@ -12,7 +13,7 @@ const toEok = (manwon: number) => {
 };
 
 const STEPS = ["계약완료", "이사예약", "잔금납부", "대출·등기", "입주완료"];
-const CURRENT_STEP = 2; // 0-indexed, "잔금납부"
+const CURRENT_STEP = 2;
 
 const SHORTCUTS = [
   { icon: "🏦", title: "잔금대출 계산기", desc: "내 대출 한도 바로 계산", to: "/loan/calc/step1" },
@@ -28,6 +29,7 @@ const NOTICES = [
 
 const Home = () => {
   const navigate = useNavigate();
+  const [dismissed, setDismissed] = useState(false);
 
   const contract = useMemo(() => {
     try {
@@ -69,73 +71,87 @@ const Home = () => {
       </header>
 
       <div className="px-4 py-5 space-y-5">
-        {/* D-Day Banner */}
-        <div
-          className="rounded-[18px] px-4 py-5 text-primary-foreground"
-          style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
-        >
-          {/* Top row */}
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[13px] opacity-90">
-              {contract ? `${contract.danjiName} ${contract.dong}동 ${contract.ho}호` : "단지명을 등록해주세요"}
-            </span>
-            <button
-              onClick={() => navigate("/contract-info")}
-              className="text-[12px] px-3 py-1 rounded-full border border-white/40 text-white/90 hover:bg-white/10 transition-colors"
-            >
-              수정
-            </button>
-          </div>
-
-          {/* D-Day */}
-          <div className="text-center mb-5">
-            {dDay !== null ? (
-              <>
-                <p className="text-[56px] font-extrabold leading-none tracking-tight">
-                  D-{dDay > 0 ? dDay : dDay === 0 ? "Day" : `+${Math.abs(dDay)}`}
-                </p>
-                <p className="text-[13px] mt-1 opacity-60">{moveInLabel}</p>
-              </>
-            ) : (
-              <p className="text-[18px] font-semibold opacity-70">계약 정보를 등록해주세요</p>
-            )}
-          </div>
-
-          {/* Steps */}
-          <div className="flex items-center justify-between">
-            {STEPS.map((step, i) => {
-              const completed = i < CURRENT_STEP;
-              const active = i === CURRENT_STEP;
-              return (
-                <div key={step} className="flex items-center">
-                  <div className="flex flex-col items-center gap-1">
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                        completed
-                          ? "bg-blue-400/40 text-white"
-                          : active
-                          ? "bg-white text-primary"
-                          : "bg-white/20 text-white/50"
-                      }`}
-                    >
-                      {completed ? <Check className="w-3.5 h-3.5" /> : i + 1}
+        {/* D-Day Banner or Soft Prompt */}
+        {contract ? (
+          <div
+            className="rounded-[18px] px-4 py-5 text-primary-foreground"
+            style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[13px] opacity-90">
+                {contract.danjiName} {contract.dong}동 {contract.ho}호
+              </span>
+              <button
+                onClick={() => navigate("/contract-info")}
+                className="text-[12px] px-3 py-1 rounded-full border border-white/40 text-white/90 hover:bg-white/10 transition-colors"
+              >
+                수정
+              </button>
+            </div>
+            <div className="text-center mb-5">
+              {dDay !== null ? (
+                <>
+                  <p className="text-[56px] font-extrabold leading-none tracking-tight">
+                    D-{dDay > 0 ? dDay : dDay === 0 ? "Day" : `+${Math.abs(dDay)}`}
+                  </p>
+                  <p className="text-[13px] mt-1 opacity-60">{moveInLabel}</p>
+                </>
+              ) : (
+                <p className="text-[18px] font-semibold opacity-70">입주 예정일을 등록해주세요</p>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              {STEPS.map((step, i) => {
+                const completed = i < CURRENT_STEP;
+                const active = i === CURRENT_STEP;
+                return (
+                  <div key={step} className="flex items-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          completed
+                            ? "bg-blue-400/40 text-white"
+                            : active
+                            ? "bg-white text-primary"
+                            : "bg-white/20 text-white/50"
+                        }`}
+                      >
+                        {completed ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                      </div>
+                      <span
+                        className={`text-[10px] whitespace-nowrap ${
+                          active ? "font-bold text-white" : completed ? "text-blue-200" : "text-white/40"
+                        }`}
+                      >
+                        {step}
+                      </span>
                     </div>
-                    <span
-                      className={`text-[10px] whitespace-nowrap ${
-                        active ? "font-bold text-white" : completed ? "text-blue-200" : "text-white/40"
-                      }`}
-                    >
-                      {step}
-                    </span>
+                    {i < STEPS.length - 1 && (
+                      <ChevronRight className={`w-3 h-3 mx-0.5 ${i < CURRENT_STEP ? "text-blue-300" : "text-white/20"}`} />
+                    )}
                   </div>
-                  {i < STEPS.length - 1 && (
-                    <ChevronRight className={`w-3 h-3 mx-0.5 ${i < CURRENT_STEP ? "text-blue-300" : "text-white/20"}`} />
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : !dismissed ? (
+          <div className="rounded-[18px] px-5 py-5 bg-blue-50 border border-blue-100 space-y-3">
+            <p className="text-2xl">🏠</p>
+            <p className="text-sm font-bold text-foreground">내 단지 정보를 등록해보세요</p>
+            <p className="text-xs text-muted-foreground">맞춤 대출 계산·납부 현황 관리가 가능합니다</p>
+            <div className="flex items-center gap-3 pt-1">
+              <Button size="sm" onClick={() => navigate("/contract-info")}>
+                지금 등록하기
+              </Button>
+              <button
+                onClick={() => setDismissed(true)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                나중에
+              </button>
+            </div>
+          </div>
+        ) : null}
 
         {/* Shortcuts 2x2 */}
         <div className="grid grid-cols-2 gap-3">
