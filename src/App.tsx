@@ -9,6 +9,9 @@ import Onboarding from "./pages/Onboarding";
 import ContractInfo from "./pages/ContractInfo";
 import TabPlaceholder from "./pages/TabPlaceholder";
 import Home from "./pages/Home";
+import LoanMain from "./pages/LoanMain";
+import LoanCalcStep1 from "./pages/LoanCalcStep1";
+import LoanCalcStep2 from "./pages/LoanCalcStep2";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,7 +28,9 @@ const App = () => (
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/contract-info" element={<ContractInfo />} />
           <Route path="/home" element={<Home />} />
-          <Route path="/loan" element={<TabPlaceholder path="/loan" />} />
+          <Route path="/loan" element={<LoanMain />} />
+          <Route path="/loan/calc/step1" element={<LoanCalcStep1 />} />
+          <Route path="/loan/calc/step2" element={<LoanCalcStep2 />} />
           <Route path="/payment" element={<TabPlaceholder path="/payment" />} />
           <Route path="/my" element={<TabPlaceholder path="/my" />} />
           <Route path="*" element={<NotFound />} />
