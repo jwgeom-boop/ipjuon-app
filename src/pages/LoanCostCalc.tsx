@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -54,6 +54,21 @@ const LoanCostCalc = () => {
     }
   }, []);
 
+  // Calculate paid total and actual balance from contractInfo
+  const { paidTotal, actualBalance } = useMemo(() => {
+    if (!contract) return { paidTotal: 0, actualBalance: 0 };
+    let paid = 0;
+    if (contract.contractPaid) paid += contract.contractAmt || 0;
+    if (contract.midPayments) {
+      paid += contract.midPayments
+        .filter((m: any) => m.paid)
+        .reduce((s: number, m: any) => s + (Number(String(m.amount).replace(/\D/g, "")) || 0), 0);
+    }
+    const balance = contract.balanceAmt || Math.max(0, (contract.price || 0) - (contract.contractAmt || 0) -
+      (contract.midPayments || []).reduce((s: number, m: any) => s + (Number(String(m.amount).replace(/\D/g, "")) || 0), 0));
+    return { paidTotal: paid, actualBalance: balance };
+  }, [contract]);
+
   const [priceRaw, setPriceRaw] = useState(contract ? fmtNum(String(contract.price)) : "");
   const price = parseNum(priceRaw);
 
@@ -75,19 +90,21 @@ const LoanCostCalc = () => {
   const [applianceChecked, setApplianceChecked] = useState(false);
   const [applianceRaw, setApplianceRaw] = useState("");
 
-  // ── 취득세 계산 ──
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // ── 취득세 계산 (분양가 기준 유지) ──
   const taxRate = price > 0 ? calcAcquisitionTaxRate(price, housingCount, regulated) : 0;
   const acquisitionTax = Math.round(price * taxRate / 100);
   const localEducationTax = Math.round(acquisitionTax * 0.1);
-  const ruralTax = Math.round(acquisitionTax * 0.2); // simplified: always show
+  const ruralTax = Math.round(acquisitionTax * 0.2);
   const firstTimeDeduction = firstTimeTax ? Math.min(200, acquisitionTax + localEducationTax + ruralTax) : 0;
   const taxTotal = Math.max(0, acquisitionTax + localEducationTax + ruralTax - firstTimeDeduction);
 
-  // ── 등기비용 ──
+  // ── 등기비용 (분양가 기준) ──
   const bondPurchase = Math.round(price * 0.013 * 0.15);
   const lawyerFee = price <= 30000 ? 40 : price <= 50000 ? 55 : price <= 80000 ? 70 : 85;
   const stampTax = 15;
-  const registrationFee = 1.5; // 1.5만원
+  const registrationFee = 1.5;
   const registrationTotal = bondPurchase + lawyerFee + stampTax + registrationFee;
 
   // ── 선택 항목 ──
@@ -101,11 +118,11 @@ const LoanCostCalc = () => {
 
   const applianceCost = applianceChecked ? parseNum(applianceRaw) : 0;
 
-  // ── 총합 ──
-  const additionalTotal = taxTotal + registrationTotal + movingCost + interiorCost + applianceCost;
-  const grandTotal = price + additionalTotal;
+  // ── 총합 (잔금 기준) ──
+  const additionalCosts = taxTotal + registrationTotal + movingCost + interiorCost + applianceCost;
+  const prepareTotal = actualBalance + additionalCosts;
   const loanAmount = loanResult?.loanPrincipal || 0;
-  const selfFund = Math.max(0, grandTotal - loanAmount);
+  const selfFund = Math.max(0, prepareTotal - loanAmount);
 
   return (
     <div className="app-shell min-h-screen bg-background">
@@ -120,7 +137,9 @@ const LoanCostCalc = () => {
         {/* 계약 정보 연동 */}
         {contract ? (
           <div className="rounded-[14px] bg-primary/5 border border-primary/15 px-4 py-3 flex items-center justify-between">
-            <p className="text-[13px] text-foreground">분양가 {toEok(price)} 기준으로 계산</p>
+            <p className="text-[13px] text-foreground">
+              잔금 {toEok(actualBalance)} 기준 · 분양가 {toEok(price)}
+            </p>
             <button
               onClick={() => navigate("/contract-info")}
               className="text-[12px] px-3 py-1 rounded-full border border-primary/30 text-primary font-medium flex-shrink-0 ml-2"
@@ -363,54 +382,95 @@ const LoanCostCalc = () => {
           </div>
         </div>
 
-        {/* ── 총 자금 계획 요약 ── */}
+        {/* ── 납부 내역 접기/펼치기 ── */}
+        {contract && price > 0 && (
+          <div className="app-card">
+            <button
+              onClick={() => setHistoryOpen(!historyOpen)}
+              className="flex items-center justify-between w-full"
+            >
+              <span className="text-sm font-semibold text-foreground">납부 내역 전체 보기</span>
+              {historyOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </button>
+            {historyOpen && (
+              <div className="mt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">분양가 전체</span>
+                  <span className="text-foreground">{toEok(price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">이미 납부 완료</span>
+                  <span className="text-foreground">-{toEok(paidTotal)}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground ml-1">계약금 + 중도금 납부완료 합산</p>
+                <div className="flex justify-between border-t border-border pt-2 font-semibold">
+                  <span className="text-foreground">남은 잔금</span>
+                  <span className="text-primary">{toEok(actualBalance)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 총 자금 계획 요약 (잔금 기준) ── */}
         {price > 0 && (
-          <div
-            className="rounded-[18px] px-5 py-5 text-primary-foreground space-y-2"
-            style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
-          >
-            <div className="flex justify-between text-sm">
-              <span className="opacity-80">분양가</span>
-              <span className="font-semibold">{toEok(price)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="opacity-80">취득세·등기비</span>
-              <span>+{(taxTotal + registrationTotal).toLocaleString()}만원</span>
-            </div>
-            {movingCost > 0 && (
+          <div className="space-y-0">
+            <p className="text-sm font-bold text-foreground mb-2">지금 준비해야 할 자금</p>
+            <div
+              className="rounded-[18px] px-5 py-5 text-primary-foreground space-y-2"
+              style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
+            >
               <div className="flex justify-between text-sm">
-                <span className="opacity-80">이사비</span>
-                <span>+{movingCost.toLocaleString()}만원</span>
+                <span className="opacity-80">잔금</span>
+                <span className="font-semibold">{toEok(actualBalance)}</span>
               </div>
-            )}
-            {interiorCost > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="opacity-80">인테리어</span>
-                <span>+{interiorCost.toLocaleString()}만원</span>
+                <span className="opacity-80">취득세·등기비 (분양가 기준)</span>
+                <span>+{(taxTotal + registrationTotal).toLocaleString()}만원</span>
               </div>
-            )}
-            {applianceCost > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="opacity-80">가전·가구</span>
-                <span>+{applianceCost.toLocaleString()}만원</span>
-              </div>
-            )}
-            <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
-              <span>실 필요 총 자금</span>
-              <span>{toEok(grandTotal)}</span>
-            </div>
-            {loanAmount > 0 && (
-              <>
+              {movingCost > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="opacity-80">대출 가능액</span>
-                  <span>-{toEok(loanAmount)}</span>
+                  <span className="opacity-80">이사비</span>
+                  <span>+{movingCost.toLocaleString()}만원</span>
                 </div>
-                <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
-                  <span>자기자금 필요</span>
-                  <span>{toEok(selfFund)}</span>
+              )}
+              {interiorCost > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="opacity-80">인테리어</span>
+                  <span>+{interiorCost.toLocaleString()}만원</span>
                 </div>
-              </>
-            )}
+              )}
+              {applianceCost > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="opacity-80">가전·가구</span>
+                  <span>+{applianceCost.toLocaleString()}만원</span>
+                </div>
+              )}
+              <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
+                <span>준비 필요 총액</span>
+                <span>{toEok(prepareTotal)}</span>
+              </div>
+              {loanAmount > 0 ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="opacity-80">대출 가능액</span>
+                    <span>-{toEok(loanAmount)}</span>
+                  </div>
+                  <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
+                    <span>순 자기자금</span>
+                    <span className="text-green-300">{toEok(selfFund)}</span>
+                  </div>
+                  <p className="text-[11px] opacity-60">대출 후 본인 부담액</p>
+                </>
+              ) : (
+                <button
+                  onClick={() => navigate("/loan/calc/step1")}
+                  className="text-[12px] text-white/80 underline underline-offset-2 mt-1"
+                >
+                  대출 계산기에서 확인 →
+                </button>
+              )}
+            </div>
           </div>
         )}
 
