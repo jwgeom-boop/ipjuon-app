@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import ContractInfo from "./pages/ContractInfo";
 import TabPlaceholder from "./pages/TabPlaceholder";
+import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
