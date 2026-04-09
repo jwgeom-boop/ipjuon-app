@@ -7,7 +7,6 @@ import Splash from "./pages/Splash";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import ContractInfo from "./pages/ContractInfo";
-import TabPlaceholder from "./pages/TabPlaceholder";
 import Home from "./pages/Home";
 import LoanMain from "./pages/LoanMain";
 import LoanCalcStep1 from "./pages/LoanCalcStep1";
@@ -17,6 +16,9 @@ import LoanCalcResult from "./pages/LoanCalcResult";
 import LoanBanks from "./pages/LoanBanks";
 import LoanCostCalc from "./pages/LoanCostCalc";
 import Payment from "./pages/Payment";
+import MyPage from "./pages/MyPage";
+import Partners from "./pages/Partners";
+import Notices from "./pages/Notices";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
