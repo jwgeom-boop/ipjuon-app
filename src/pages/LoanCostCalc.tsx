@@ -137,7 +137,9 @@ const LoanCostCalc = () => {
         {/* 계약 정보 연동 */}
         {contract ? (
           <div className="rounded-[14px] bg-primary/5 border border-primary/15 px-4 py-3 flex items-center justify-between">
-            <p className="text-[13px] text-foreground">분양가 {toEok(price)} 기준으로 계산</p>
+            <p className="text-[13px] text-foreground">
+              잔금 {toEok(actualBalance)} 기준 · 분양가 {toEok(price)}
+            </p>
             <button
               onClick={() => navigate("/contract-info")}
               className="text-[12px] px-3 py-1 rounded-full border border-primary/30 text-primary font-medium flex-shrink-0 ml-2"
