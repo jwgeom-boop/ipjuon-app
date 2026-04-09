@@ -24,7 +24,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/contract-info" element={<ContractInfo />} />
-          <Route path="/home" element={<TabPlaceholder path="/home" />} />
+          <Route path="/home" element={<Home />} />
           <Route path="/loan" element={<TabPlaceholder path="/loan" />} />
           <Route path="/payment" element={<TabPlaceholder path="/payment" />} />
           <Route path="/my" element={<TabPlaceholder path="/my" />} />
