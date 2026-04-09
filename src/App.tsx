@@ -43,7 +43,9 @@ const App = () => (
           <Route path="/loan/banks" element={<LoanBanks />} />
           <Route path="/loan/cost-calc" element={<LoanCostCalc />} />
           <Route path="/payment" element={<Payment />} />
-          <Route path="/my" element={<TabPlaceholder path="/my" />} />
+          <Route path="/my" element={<MyPage />} />
+          <Route path="/my/partners" element={<Partners />} />
+          <Route path="/notices" element={<Notices />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
