@@ -54,6 +54,21 @@ const LoanCostCalc = () => {
     }
   }, []);
 
+  // Calculate paid total and actual balance from contractInfo
+  const { paidTotal, actualBalance } = useMemo(() => {
+    if (!contract) return { paidTotal: 0, actualBalance: 0 };
+    let paid = 0;
+    if (contract.contractPaid) paid += contract.contractAmt || 0;
+    if (contract.midPayments) {
+      paid += contract.midPayments
+        .filter((m: any) => m.paid)
+        .reduce((s: number, m: any) => s + (Number(String(m.amount).replace(/\D/g, "")) || 0), 0);
+    }
+    const balance = contract.balanceAmt || Math.max(0, (contract.price || 0) - (contract.contractAmt || 0) -
+      (contract.midPayments || []).reduce((s: number, m: any) => s + (Number(String(m.amount).replace(/\D/g, "")) || 0), 0));
+    return { paidTotal: paid, actualBalance: balance };
+  }, [contract]);
+
   const [priceRaw, setPriceRaw] = useState(contract ? fmtNum(String(contract.price)) : "");
   const price = parseNum(priceRaw);
 
@@ -75,19 +90,21 @@ const LoanCostCalc = () => {
   const [applianceChecked, setApplianceChecked] = useState(false);
   const [applianceRaw, setApplianceRaw] = useState("");
 
-  // ── 취득세 계산 ──
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  // ── 취득세 계산 (분양가 기준 유지) ──
   const taxRate = price > 0 ? calcAcquisitionTaxRate(price, housingCount, regulated) : 0;
   const acquisitionTax = Math.round(price * taxRate / 100);
   const localEducationTax = Math.round(acquisitionTax * 0.1);
-  const ruralTax = Math.round(acquisitionTax * 0.2); // simplified: always show
+  const ruralTax = Math.round(acquisitionTax * 0.2);
   const firstTimeDeduction = firstTimeTax ? Math.min(200, acquisitionTax + localEducationTax + ruralTax) : 0;
   const taxTotal = Math.max(0, acquisitionTax + localEducationTax + ruralTax - firstTimeDeduction);
 
-  // ── 등기비용 ──
+  // ── 등기비용 (분양가 기준) ──
   const bondPurchase = Math.round(price * 0.013 * 0.15);
   const lawyerFee = price <= 30000 ? 40 : price <= 50000 ? 55 : price <= 80000 ? 70 : 85;
   const stampTax = 15;
-  const registrationFee = 1.5; // 1.5만원
+  const registrationFee = 1.5;
   const registrationTotal = bondPurchase + lawyerFee + stampTax + registrationFee;
 
   // ── 선택 항목 ──
@@ -101,11 +118,11 @@ const LoanCostCalc = () => {
 
   const applianceCost = applianceChecked ? parseNum(applianceRaw) : 0;
 
-  // ── 총합 ──
-  const additionalTotal = taxTotal + registrationTotal + movingCost + interiorCost + applianceCost;
-  const grandTotal = price + additionalTotal;
+  // ── 총합 (잔금 기준) ──
+  const additionalCosts = taxTotal + registrationTotal + movingCost + interiorCost + applianceCost;
+  const prepareTotal = actualBalance + additionalCosts;
   const loanAmount = loanResult?.loanPrincipal || 0;
-  const selfFund = Math.max(0, grandTotal - loanAmount);
+  const selfFund = Math.max(0, prepareTotal - loanAmount);
 
   return (
     <div className="app-shell min-h-screen bg-background">
