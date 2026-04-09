@@ -382,54 +382,95 @@ const LoanCostCalc = () => {
           </div>
         </div>
 
-        {/* ── 총 자금 계획 요약 ── */}
+        {/* ── 납부 내역 접기/펼치기 ── */}
+        {contract && price > 0 && (
+          <div className="app-card">
+            <button
+              onClick={() => setHistoryOpen(!historyOpen)}
+              className="flex items-center justify-between w-full"
+            >
+              <span className="text-sm font-semibold text-foreground">납부 내역 전체 보기</span>
+              {historyOpen ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+            </button>
+            {historyOpen && (
+              <div className="mt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">분양가 전체</span>
+                  <span className="text-foreground">{toEok(price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">이미 납부 완료</span>
+                  <span className="text-foreground">-{toEok(paidTotal)}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground ml-1">계약금 + 중도금 납부완료 합산</p>
+                <div className="flex justify-between border-t border-border pt-2 font-semibold">
+                  <span className="text-foreground">남은 잔금</span>
+                  <span className="text-primary">{toEok(actualBalance)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 총 자금 계획 요약 (잔금 기준) ── */}
         {price > 0 && (
-          <div
-            className="rounded-[18px] px-5 py-5 text-primary-foreground space-y-2"
-            style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
-          >
-            <div className="flex justify-between text-sm">
-              <span className="opacity-80">분양가</span>
-              <span className="font-semibold">{toEok(price)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="opacity-80">취득세·등기비</span>
-              <span>+{(taxTotal + registrationTotal).toLocaleString()}만원</span>
-            </div>
-            {movingCost > 0 && (
+          <div className="space-y-0">
+            <p className="text-sm font-bold text-foreground mb-2">지금 준비해야 할 자금</p>
+            <div
+              className="rounded-[18px] px-5 py-5 text-primary-foreground space-y-2"
+              style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
+            >
               <div className="flex justify-between text-sm">
-                <span className="opacity-80">이사비</span>
-                <span>+{movingCost.toLocaleString()}만원</span>
+                <span className="opacity-80">잔금</span>
+                <span className="font-semibold">{toEok(actualBalance)}</span>
               </div>
-            )}
-            {interiorCost > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="opacity-80">인테리어</span>
-                <span>+{interiorCost.toLocaleString()}만원</span>
+                <span className="opacity-80">취득세·등기비 (분양가 기준)</span>
+                <span>+{(taxTotal + registrationTotal).toLocaleString()}만원</span>
               </div>
-            )}
-            {applianceCost > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="opacity-80">가전·가구</span>
-                <span>+{applianceCost.toLocaleString()}만원</span>
-              </div>
-            )}
-            <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
-              <span>실 필요 총 자금</span>
-              <span>{toEok(grandTotal)}</span>
-            </div>
-            {loanAmount > 0 && (
-              <>
+              {movingCost > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="opacity-80">대출 가능액</span>
-                  <span>-{toEok(loanAmount)}</span>
+                  <span className="opacity-80">이사비</span>
+                  <span>+{movingCost.toLocaleString()}만원</span>
                 </div>
-                <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
-                  <span>자기자금 필요</span>
-                  <span>{toEok(selfFund)}</span>
+              )}
+              {interiorCost > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="opacity-80">인테리어</span>
+                  <span>+{interiorCost.toLocaleString()}만원</span>
                 </div>
-              </>
-            )}
+              )}
+              {applianceCost > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="opacity-80">가전·가구</span>
+                  <span>+{applianceCost.toLocaleString()}만원</span>
+                </div>
+              )}
+              <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
+                <span>준비 필요 총액</span>
+                <span>{toEok(prepareTotal)}</span>
+              </div>
+              {loanAmount > 0 ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="opacity-80">대출 가능액</span>
+                    <span>-{toEok(loanAmount)}</span>
+                  </div>
+                  <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
+                    <span>순 자기자금</span>
+                    <span className="text-green-300">{toEok(selfFund)}</span>
+                  </div>
+                  <p className="text-[11px] opacity-60">대출 후 본인 부담액</p>
+                </>
+              ) : (
+                <button
+                  onClick={() => navigate("/loan/calc/step1")}
+                  className="text-[12px] text-white/80 underline underline-offset-2 mt-1"
+                >
+                  대출 계산기에서 확인 →
+                </button>
+              )}
+            </div>
           </div>
         )}
 
