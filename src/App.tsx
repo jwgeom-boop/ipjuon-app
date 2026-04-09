@@ -9,6 +9,9 @@ import Onboarding from "./pages/Onboarding";
 import ContractInfo from "./pages/ContractInfo";
 import TabPlaceholder from "./pages/TabPlaceholder";
 import Home from "./pages/Home";
+import LoanMain from "./pages/LoanMain";
+import LoanCalcStep1 from "./pages/LoanCalcStep1";
+import LoanCalcStep2 from "./pages/LoanCalcStep2";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
