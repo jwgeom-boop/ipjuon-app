@@ -49,7 +49,7 @@ const Onboarding = () => {
       {/* Skip */}
       {current < slides.length - 1 && (
         <button
-          onClick={() => navigate("/contract-info", { replace: true })}
+          onClick={() => { localStorage.setItem("onboarding_done", "true"); navigate("/home", { replace: true }); }}
           className="absolute top-6 right-6 text-sm text-muted-foreground z-10"
         >
           건너뛰기
