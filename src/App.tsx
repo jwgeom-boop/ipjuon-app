@@ -14,6 +14,8 @@ import LoanCalcStep1 from "./pages/LoanCalcStep1";
 import LoanCalcStep2 from "./pages/LoanCalcStep2";
 import LoanCalcStep3 from "./pages/LoanCalcStep3";
 import LoanCalcResult from "./pages/LoanCalcResult";
+import LoanBanks from "./pages/LoanBanks";
+import LoanCostCalc from "./pages/LoanCostCalc";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
