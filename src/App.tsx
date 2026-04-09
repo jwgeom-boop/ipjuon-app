@@ -9,10 +9,7 @@ import Onboarding from "./pages/Onboarding";
 import ContractInfo from "./pages/ContractInfo";
 import Home from "./pages/Home";
 import LoanMain from "./pages/LoanMain";
-import LoanCalcStep1 from "./pages/LoanCalcStep1";
-import LoanCalcStep2 from "./pages/LoanCalcStep2";
-import LoanCalcStep3 from "./pages/LoanCalcStep3";
-import LoanCalcResult from "./pages/LoanCalcResult";
+import LoanCalcDiagnosis from "./pages/LoanCalcDiagnosis";
 import LoanBanks from "./pages/LoanBanks";
 import LoanCostCalc from "./pages/LoanCostCalc";
 import Payment from "./pages/Payment";
@@ -36,10 +33,7 @@ const App = () => (
           <Route path="/contract-info" element={<ContractInfo />} />
           <Route path="/home" element={<Home />} />
           <Route path="/loan" element={<LoanMain />} />
-          <Route path="/loan/calc/step1" element={<LoanCalcStep1 />} />
-          <Route path="/loan/calc/step2" element={<LoanCalcStep2 />} />
-          <Route path="/loan/calc/step3" element={<LoanCalcStep3 />} />
-          <Route path="/loan/calc/result" element={<LoanCalcResult />} />
+          <Route path="/loan/calc/step1" element={<LoanCalcDiagnosis />} />
           <Route path="/loan/banks" element={<LoanBanks />} />
           <Route path="/loan/cost-calc" element={<LoanCostCalc />} />
           <Route path="/payment" element={<Payment />} />
