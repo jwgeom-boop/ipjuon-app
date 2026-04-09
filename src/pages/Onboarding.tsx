@@ -27,7 +27,7 @@ const Onboarding = () => {
 
   const goNext = () => {
     if (current < slides.length - 1) setCurrent(current + 1);
-    else navigate("/contract-info", { replace: true });
+    else navigate("/home", { replace: true });
   };
 
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart(e.touches[0].clientX);

@@ -190,14 +190,18 @@ const Payment = () => {
           </button>
         </header>
         <div className="flex flex-col items-center justify-center h-[60vh] text-center px-6">
-          <div className="text-5xl mb-4">📋</div>
-          <p className="text-muted-foreground mb-4">계약 정보를 먼저 등록해주세요</p>
-          <Button onClick={() => navigate("/contract-info")}>등록하기</Button>
+          <div className="text-5xl mb-4">💳</div>
+          <p className="text-base font-bold text-foreground mb-2">납부 현황을 관리하려면</p>
+          <p className="text-sm text-muted-foreground mb-6">계약 정보를 등록해주세요</p>
+          <Button onClick={() => navigate("/contract-info")}>계약 정보 등록하기</Button>
         </div>
         <BottomTabBar />
       </div>
     );
   }
+
+  // Contract exists but no payment structure (priceOnly)
+  const hasMidPayments = (contract.midPayments || []).length > 0;
 
   return (
     <div className="app-shell min-h-screen bg-background pb-20">
@@ -213,6 +217,16 @@ const Payment = () => {
       </header>
 
       <div className="px-4 py-5 space-y-5">
+        {/* Missing detail banner */}
+        {(contract.priceOnly || !hasMidPayments) && (
+          <button
+            onClick={() => navigate("/contract-info")}
+            className="w-full rounded-lg bg-accent/10 border border-accent/30 px-4 py-3 text-left"
+          >
+            <p className="text-xs text-foreground font-medium">납부 항목 상세 정보를 추가해주세요 →</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">계약금·중도금 정보를 등록하면 정확한 관리가 가능합니다</p>
+          </button>
+        )}
         {/* 상단 요약 4칸 */}
         <div
           className="rounded-[18px] px-4 py-4 grid grid-cols-2 gap-3 text-primary-foreground"

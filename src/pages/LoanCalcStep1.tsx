@@ -1,8 +1,12 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import LoanCalcHeader from "@/components/LoanCalcHeader";
 
+const fmtNum = (v: string) => v.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const parseNum = (v: string) => Number(v.replace(/\D/g, "")) || 0;
 const toEok = (manwon: number) => {
   const eok = Math.floor(manwon / 10000);
   const rest = manwon % 10000;
@@ -27,20 +31,20 @@ const HOUSING_OPTIONS: { value: Housing; label: string }[] = [
 ];
 
 const PRICE_RANGES = ["5억 이하", "5억~9억", "9억 초과"] as const;
+const QUICK_PRICES = [30000, 40000, 50000, 60000, 70000];
 
 function calcLTV(region: Region, housing: Housing, firstTime: boolean, priceRange: string): number {
   if (housing === 2) return 30;
   if (region === "speculative") {
     if (housing === 0 && firstTime && priceRange !== "9억 초과") return 80;
     if (housing === 0) return 50;
-    return 50; // 1주택
+    return 50;
   }
   if (region === "regulated") {
     if (housing === 0 && firstTime && priceRange !== "9억 초과") return 80;
     if (housing === 0) return 70;
     return 60;
   }
-  // non-regulated
   if (housing === 0) return 80;
   return 70;
 }
@@ -62,6 +66,19 @@ const LoanCalcStep1 = () => {
       return null;
     }
   }, []);
+
+  // Bottom sheet for quick price entry when no contract
+  const [sheetOpen, setSheetOpen] = useState(!contract);
+  const [quickPriceRaw, setQuickPriceRaw] = useState("");
+
+  const handleQuickStart = () => {
+    const p = parseNum(quickPriceRaw);
+    if (p <= 0) return;
+    // Save minimal contractInfo with price only
+    localStorage.setItem("contractInfo", JSON.stringify({ price: p, priceOnly: true }));
+    setSheetOpen(false);
+    window.location.reload();
+  };
 
   const appraisalPrice = contract ? (contract.appraisalPrice || contract.price) : 0;
   const basePrice = contract ? Math.min(contract.price, appraisalPrice) : 0;
@@ -92,6 +109,21 @@ const LoanCalcStep1 = () => {
       <LoanCalcHeader currentStep={1} />
 
       <div className="px-4 py-5 pb-32 space-y-6">
+        {/* Price-only banner */}
+        {contract?.priceOnly && (
+          <div className="rounded-lg bg-accent/10 border border-accent/30 px-4 py-3 space-y-1">
+            <p className="text-xs text-foreground">
+              계약금·중도금 정보를 추가하면 실제 필요 잔금이 더 정확하게 계산됩니다.
+            </p>
+            <button
+              onClick={() => navigate("/contract-info")}
+              className="text-xs font-semibold text-primary"
+            >
+              정보 추가하기 →
+            </button>
+          </div>
+        )}
+
         <h2 className="text-base font-bold text-foreground">주택 조건을 선택해주세요</h2>
 
         {/* ① 지역 구분 */}
@@ -245,6 +277,58 @@ const LoanCalcStep1 = () => {
           다음 →
         </Button>
       </div>
+
+      {/* Quick price entry sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-[18px] max-w-[430px] mx-auto">
+          <SheetHeader>
+            <SheetTitle>분양가만 입력해도 계산할 수 있어요</SheetTitle>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="text-sm font-medium text-foreground">분양가 (만원)</label>
+              <Input
+                value={quickPriceRaw}
+                onChange={(e) => setQuickPriceRaw(fmtNum(e.target.value))}
+                placeholder="50000"
+                className="h-11 mt-1"
+                inputMode="numeric"
+              />
+              {parseNum(quickPriceRaw) > 0 && (
+                <p className="text-xs text-accent mt-1 font-medium">{toEok(parseNum(quickPriceRaw))}</p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {QUICK_PRICES.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setQuickPriceRaw(fmtNum(String(p)))}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    parseNum(quickPriceRaw) === p
+                      ? "bg-primary/10 border-primary text-primary"
+                      : "bg-card border-border text-foreground"
+                  }`}
+                >
+                  {toEok(p)}
+                </button>
+              ))}
+            </div>
+            <Button
+              className="w-full h-11"
+              disabled={parseNum(quickPriceRaw) <= 0}
+              onClick={handleQuickStart}
+            >
+              바로 계산하기
+            </Button>
+            <button
+              onClick={() => { setSheetOpen(false); navigate("/contract-info"); }}
+              className="w-full text-center text-sm text-muted-foreground py-1 hover:text-foreground transition-colors"
+            >
+              전체 정보 등록하기 (더 정확한 계산)
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };
