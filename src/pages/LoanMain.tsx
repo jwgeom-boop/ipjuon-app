@@ -1,27 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronRight, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import BottomTabBar from "@/components/BottomTabBar";
-
-type Bank = { name: string; icon: string; rate: string; tags: string[] };
-
-const BANKS_1: Bank[] = [
-  { name: "KB국민은행", icon: "🏦", rate: "연 3.45 ~ 4.10%", tags: ["생애최초 우대", "고정금리 특화"] },
-  { name: "신한은행", icon: "🏦", rate: "연 3.35 ~ 4.05%", tags: ["소득 우대", "빠른 심사"] },
-  { name: "하나은행", icon: "🏦", rate: "연 3.55 ~ 4.20%", tags: ["비대면 간편", "혼합형"] },
-  { name: "우리은행", icon: "🏦", rate: "연 3.40 ~ 4.00%", tags: ["신혼 우대", "장기 특화"] },
-  { name: "NH농협은행", icon: "🏦", rate: "연 3.30 ~ 3.95%", tags: ["서민 금융"] },
-];
-
-const BANKS_2: Bank[] = [
-  { name: "새마을금고", icon: "🏢", rate: "연 3.80 ~ 5.00%", tags: ["한도 우대", "지역 밀착"] },
-  { name: "신협", icon: "🏢", rate: "연 3.90 ~ 5.20%", tags: ["조합원 우대"] },
-  { name: "지역농협", icon: "🏢", rate: "연 3.70 ~ 4.80%", tags: ["농촌 우대", "지역 특화"] },
-  { name: "산림조합", icon: "🏢", rate: "연 3.85 ~ 5.10%", tags: ["산림 종사자 우대"] },
-];
+import { ALL_BANKS, getBanksForComplex, type BankInfo } from "@/data/bankData";
 
 const TIME_OPTIONS = ["오전", "오후", "저녁"];
 const DEFAULT_VISIBLE = 2;
@@ -38,6 +22,19 @@ const LoanMain = () => {
   const [consultTime, setConsultTime] = useState<string | null>(null);
   const [rateOpen, setRateOpen] = useState(false);
 
+  const contract = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("contractInfo") || "null"); } catch { return null; }
+  }, []);
+
+  const complexMatch = useMemo(() => getBanksForComplex(contract?.danjiName), [contract]);
+
+  const banks1 = complexMatch ? complexMatch.banks1 : ALL_BANKS.filter(b => b.type === "1금융");
+  const banks2 = complexMatch ? complexMatch.banks2 : ALL_BANKS.filter(b => b.type === "2금융");
+  const isFiltered = !!complexMatch;
+
+  const hidden1 = banks1.slice(DEFAULT_VISIBLE);
+  const hidden2 = banks2.slice(DEFAULT_VISIBLE);
+
   const handleSubmit = () => {
     if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
     setModalBank(null);
@@ -52,14 +49,8 @@ const LoanMain = () => {
     setConsultTime(null);
   };
 
-  const visible1 = show1All ? BANKS_1 : BANKS_1.slice(0, DEFAULT_VISIBLE);
-  const hidden1 = BANKS_1.slice(DEFAULT_VISIBLE);
-  const visible2 = show2All ? BANKS_2 : BANKS_2.slice(0, DEFAULT_VISIBLE);
-  const hidden2 = BANKS_2.slice(DEFAULT_VISIBLE);
-
   return (
     <div className="app-shell min-h-screen bg-background pb-20">
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3">
         <h1 className="text-lg font-bold text-foreground">잔금대출 상담</h1>
         <p className="text-xs text-muted-foreground mt-0.5">협약 금융기관 전담 담당자가 직접 상담해드립니다</p>
@@ -72,64 +63,76 @@ const LoanMain = () => {
           <p className="text-xs opacity-80 mt-1">수수료 없이 무료로 최적 상품을 안내해드립니다</p>
         </div>
 
-        {/* 1금융권 Section */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold text-foreground">🏦 1금융권 (DSR 40%)</p>
-            <button
-              onClick={() => setShow1All(!show1All)}
-              className="flex items-center gap-0.5 text-xs text-primary font-medium"
-            >
-              {show1All ? <>접기 <ChevronUp className="w-3.5 h-3.5" /></> : <>전체보기 <ChevronRight className="w-3.5 h-3.5" /></>}
-            </button>
+        {/* Filtered notice */}
+        {isFiltered && (
+          <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
+            <p className="text-[13px] text-foreground font-medium">🏠 {contract.danjiName} 참여 금융기관</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
           </div>
-          <div className="space-y-3">
-            {BANKS_1.slice(0, DEFAULT_VISIBLE).map(bank => (
-              <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
-            ))}
-            {show1All && hidden1.length > 0 && (
-              <div className="space-y-3 animate-fade-in">
-                {hidden1.map(bank => (
-                  <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
-        {/* Divider */}
-        <div className="border-t border-border" />
+        {/* 1금융권 Section */}
+        {banks1.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold text-foreground">🏦 1금융권 (DSR 40%)</p>
+              {banks1.length > DEFAULT_VISIBLE && (
+                <button
+                  onClick={() => setShow1All(!show1All)}
+                  className="flex items-center gap-0.5 text-xs text-primary font-medium"
+                >
+                  {show1All ? <>접기 <ChevronUp className="w-3.5 h-3.5" /></> : <>전체보기 <ChevronRight className="w-3.5 h-3.5" /></>}
+                </button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {banks1.slice(0, DEFAULT_VISIBLE).map(bank => (
+                <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
+              ))}
+              {show1All && hidden1.length > 0 && (
+                <div className="space-y-3 animate-fade-in">
+                  {hidden1.map(bank => (
+                    <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {banks1.length > 0 && banks2.length > 0 && <div className="border-t border-border" />}
 
         {/* 2금융권 Section */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-bold text-foreground">🏢 상호금융 (DSR 50%)</p>
-            <button
-              onClick={() => setShow2All(!show2All)}
-              className="flex items-center gap-0.5 text-xs text-primary font-medium"
-            >
-              {show2All ? <>접기 <ChevronUp className="w-3.5 h-3.5" /></> : <>전체보기 <ChevronRight className="w-3.5 h-3.5" /></>}
-            </button>
+        {banks2.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-bold text-foreground">🏢 상호금융 (DSR 50%)</p>
+              {banks2.length > DEFAULT_VISIBLE && (
+                <button
+                  onClick={() => setShow2All(!show2All)}
+                  className="flex items-center gap-0.5 text-xs text-primary font-medium"
+                >
+                  {show2All ? <>접기 <ChevronUp className="w-3.5 h-3.5" /></> : <>전체보기 <ChevronRight className="w-3.5 h-3.5" /></>}
+                </button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {banks2.slice(0, DEFAULT_VISIBLE).map(bank => (
+                <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
+              ))}
+              {show2All && hidden2.length > 0 && (
+                <div className="space-y-3 animate-fade-in">
+                  {hidden2.map(bank => (
+                    <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="space-y-3">
-            {BANKS_2.slice(0, DEFAULT_VISIBLE).map(bank => (
-              <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
-            ))}
-            {show2All && hidden2.length > 0 && (
-              <div className="space-y-3 animate-fade-in">
-                {hidden2.map(bank => (
-                  <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
 
-        {/* Rate Info Accordion */}
-        <button
-          onClick={() => setRateOpen(!rateOpen)}
-          className="flex items-center gap-1 text-xs text-muted-foreground"
-        >
+        {/* Rate Info */}
+        <button onClick={() => setRateOpen(!rateOpen)} className="flex items-center gap-1 text-xs text-muted-foreground">
           금리 기준 안내 {rateOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
         {rateOpen && (
@@ -138,34 +141,23 @@ const LoanMain = () => {
           </p>
         )}
 
-        {/* Divider */}
         <div className="border-t border-border" />
 
         {/* Calculator Section */}
         <div className="rounded-[14px] bg-muted/50 px-4 py-4">
           <p className="text-sm font-semibold text-foreground">💡 상담 전에 내 대출 한도를 먼저 알고 싶다면?</p>
           <div className="grid grid-cols-2 gap-3 mt-3">
-            <button
-              onClick={() => navigate("/loan/calc/step1")}
-              className="rounded-xl bg-card border border-border p-3 text-left hover:shadow-sm transition-shadow"
-            >
+            <button onClick={() => navigate("/loan/calc/step1")} className="rounded-xl bg-card border border-border p-3 text-left hover:shadow-sm transition-shadow">
               <p className="text-2xl">🏦</p>
               <p className="text-sm font-bold text-foreground mt-2">잔금대출 자가진단</p>
               <p className="text-[11px] text-muted-foreground mt-1">LTV·DSR 기준 예상 한도</p>
-              <div className="mt-2 flex items-center gap-0.5 text-xs text-primary font-medium">
-                시작 <ChevronRight className="w-3.5 h-3.5" />
-              </div>
+              <div className="mt-2 flex items-center gap-0.5 text-xs text-primary font-medium">시작 <ChevronRight className="w-3.5 h-3.5" /></div>
             </button>
-            <button
-              onClick={() => navigate("/loan/cost-calc")}
-              className="rounded-xl bg-card border border-border p-3 text-left hover:shadow-sm transition-shadow"
-            >
+            <button onClick={() => navigate("/loan/cost-calc")} className="rounded-xl bg-card border border-border p-3 text-left hover:shadow-sm transition-shadow">
               <p className="text-2xl">💰</p>
               <p className="text-sm font-bold text-foreground mt-2">입주비용 계산기</p>
               <p className="text-[11px] text-muted-foreground mt-1">취득세·등기·이사비</p>
-              <div className="mt-2 flex items-center gap-0.5 text-xs text-primary font-medium">
-                시작 <ChevronRight className="w-3.5 h-3.5" />
-              </div>
+              <div className="mt-2 flex items-center gap-0.5 text-xs text-primary font-medium">시작 <ChevronRight className="w-3.5 h-3.5" /></div>
             </button>
           </div>
         </div>
@@ -193,21 +185,13 @@ const LoanMain = () => {
                 <label className="text-sm font-medium text-foreground">희망 상담 시간</label>
                 <div className="grid grid-cols-3 gap-2">
                   {TIME_OPTIONS.map(t => (
-                    <button
-                      key={t}
-                      onClick={() => setConsultTime(t)}
+                    <button key={t} onClick={() => setConsultTime(t)}
                       className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${consultTime === t ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground"}`}
-                    >
-                      {t}
-                    </button>
+                    >{t}</button>
                   ))}
                 </div>
               </div>
-              <Button
-                className="w-full h-12 text-base font-semibold mt-2"
-                disabled={!consultName.trim() || !consultPhone.trim() || !consultTime}
-                onClick={handleSubmit}
-              >
+              <Button className="w-full h-12 text-base font-semibold mt-2" disabled={!consultName.trim() || !consultPhone.trim() || !consultTime} onClick={handleSubmit}>
                 신청 완료
               </Button>
             </div>
@@ -220,23 +204,17 @@ const LoanMain = () => {
   );
 };
 
-function BankCard({ bank, onConsult }: { bank: Bank; onConsult: () => void }) {
+function BankCard({ bank, onConsult }: { bank: BankInfo; onConsult: () => void }) {
   return (
     <div className="rounded-[14px] border border-border bg-card p-4">
-      <div>
-        <p className="text-base font-bold text-foreground">{bank.icon} {bank.name}</p>
-        <p className="text-sm text-primary font-semibold mt-1">예상 금리 {bank.rate}</p>
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {bank.tags.map(tag => (
-            <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent-foreground font-medium border border-accent/20">
-              {tag}
-            </span>
-          ))}
-        </div>
+      <p className="text-base font-bold text-foreground">{bank.icon} {bank.name}</p>
+      <p className="text-sm text-primary font-semibold mt-1">예상 금리 {bank.rate}</p>
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        {bank.tags.map(tag => (
+          <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent-foreground font-medium border border-accent/20">{tag}</span>
+        ))}
       </div>
-      <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={onConsult}>
-        📞 상담 신청하기
-      </Button>
+      <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={onConsult}>📞 상담 신청하기</Button>
     </div>
   );
 }
