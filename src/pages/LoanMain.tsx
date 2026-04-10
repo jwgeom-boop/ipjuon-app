@@ -163,6 +163,8 @@ const LoanMain = () => {
         </DialogContent>
       </Dialog>
 
+      {showCalc && <LoanCalculator onClose={() => setShowCalc(false)} />}
+
       <BottomTabBar />
     </div>
   );
