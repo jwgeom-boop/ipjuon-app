@@ -35,49 +35,59 @@ const QUICK_MENU = [
 
 const NOTICES = [
   {
-    id: 1,
-    title: "4월 잔금 납부 안내",
-    date: "2026-04-08",
-    tag: "납부",
-    content:
-      "4월 잔금 납부 기한은 2026년 4월 30일까지입니다. 납부 계좌와 금액을 확인하시고 기한 내 납부 부탁드립니다. 기한 초과 시 연체료가 발생할 수 있습니다.",
+    id: "1",
+    category: "대출정보" as const,
+    title: "KB국민은행 생애최초 우대조건 안내",
+    date: "2026.04.08",
+    content: "KB국민은행에서 생애최초 주택 구입자를 위한 우대조건을 안내드립니다.\n\n· 우대 대상: 생애최초 주택 구입자\n· 우대 내용: LTV 최대 80% 적용\n· 문의: ☎ 1588-9999\n\n자세한 사항은 가까운 지점에 문의해 주세요.",
   },
   {
-    id: 2,
-    title: "입주 사전 점검 일정 공지",
-    date: "2026-04-05",
-    tag: "공지",
-    content:
-      "입주 사전 점검은 2026년 5월 10일~12일 진행됩니다. 세대별 점검 시간표는 관리사무소에서 별도 안내 예정이오니 참고 바랍니다.",
+    id: "2",
+    category: "서비스안내" as const,
+    title: "입주ON 앱 정식 출시 안내",
+    date: "2026.04.05",
+    content: "입주ON 앱이 정식 출시되었습니다.\n\n잔금대출 한도 계산, 협약은행 확인, 납부 일정 관리를 한 곳에서 편리하게 이용해 보세요.\n\n서비스 이용 중 불편사항은 마이페이지 > 고객문의로 접수해 주세요.",
   },
 ];
 
 const PARTNERS = [
   {
-    id: 1,
-    name: "빠른이사",
-    category: "이사",
-    tagline: "당일 예약 가능 · 전국 서비스",
-    tel: "02-1000-1001",
-    desc: "전국 어디든 빠르고 안전하게! 포장이사부터 원룸이사까지 전문 인력이 책임집니다. 입주ON 회원 10% 할인 적용.",
+    id: "1",
+    category: "인테리어" as const,
+    name: "홈닥터 인테리어",
+    benefit: "입주ON 특별 할인",
+    description: "입주ON 앱 고객 특별 할인\n시공 견적 무료 상담\n평일 09:00~18:00",
+    phone: "02-1234-5678",
   },
   {
-    id: 2,
-    name: "홈스타일",
-    category: "인테리어",
-    tagline: "84㎡ 기본 패키지 1,250만원",
-    tel: "02-1000-2001",
-    desc: "합리적인 가격의 인테리어 패키지를 제공합니다. 주방·욕실·바닥 시공 전문. 입주ON 전용 50만원 할인.",
+    id: "2",
+    category: "이사" as const,
+    name: "스마트 이사",
+    benefit: "포장이사 10% 할인",
+    description: "포장이사 전문\n입주ON 고객 10% 할인\n24시간 상담 가능",
+    phone: "02-9876-5432",
   },
   {
-    id: 3,
-    name: "세이프 법무사",
-    category: "등기",
-    tagline: "등기 원스톱 서비스",
-    tel: "02-1000-3001",
-    desc: "아파트 소유권 이전 등기를 빠르고 정확하게 처리해드립니다. 무료 상담 가능.",
+    id: "3",
+    category: "청소" as const,
+    name: "클린하우스",
+    benefit: "입주 청소 특별가",
+    description: "입주 전문 청소 서비스\n친환경 세제 사용\n평일·주말 모두 가능",
+    phone: "02-3333-7777",
   },
 ];
+
+const NOTICE_BADGE: Record<string, { bg: string; text: string }> = {
+  "대출정보": { bg: "#DBEAFE", text: "#1D4ED8" },
+  "서비스안내": { bg: "#D1FAE5", text: "#065F46" },
+  "제휴소식": { bg: "#FEF3C7", text: "#92400E" },
+};
+
+const PARTNER_BADGE: Record<string, { bg: string; text: string }> = {
+  "인테리어": { bg: "#EDE9FE", text: "#5B21B6" },
+  "이사": { bg: "#DBEAFE", text: "#1E40AF" },
+  "청소": { bg: "#D1FAE5", text: "#065F46" },
+};
 
 const toEok = (won: number) => {
   const manwon = Math.floor(won / 10000);
@@ -95,12 +105,29 @@ const dDay = (dateStr: string) => {
   return `D+${Math.abs(diff)}`;
 };
 
+const dDayDiff = (dateStr: string) =>
+  Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+
+const dDayColor = (dateStr: string) => {
+  const diff = dDayDiff(dateStr);
+  if (diff < 0) return "text-gray-400";
+  if (diff <= 7) return "text-red-600 font-bold";
+  if (diff <= 30) return "text-red-500";
+  if (diff <= 60) return "text-orange-500";
+  return "text-blue-600";
+};
+
+const dDayLabel = (dateStr: string) => {
+  const diff = dDayDiff(dateStr);
+  if (diff < 0) return "입주 완료";
+  return dDay(dateStr);
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(getUnreadCount);
 
-  // Run D-day check on mount
   useEffect(() => {
     checkDdayAlerts();
     setUnreadCount(getUnreadCount());
@@ -142,6 +169,7 @@ const Home = () => {
   };
 
   const doneCount = checked.filter(Boolean).length;
+  const allDone = doneCount === CHECKLIST_ITEMS.length;
   const progress = (doneCount / CHECKLIST_ITEMS.length) * 100;
   const showBanner = !contract && bannerVisible;
 
@@ -149,8 +177,8 @@ const Home = () => {
     <div className="app-shell min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3 flex items-center justify-between">
-        <span className="text-lg font-bold text-primary">
-          입주<span className="text-accent">ON</span>
+        <span className="text-lg font-bold" style={{ color: "#1E3A5F" }}>
+          입주ON
         </span>
         <button onClick={() => setShowNotifications(true)} className="relative p-1">
           <Bell className="h-6 w-6 text-foreground" />
@@ -194,8 +222,8 @@ const Home = () => {
                 </p>
               </div>
               {contract.moveInDate && (
-                <span className="text-sm font-bold text-accent">
-                  {dDay(contract.moveInDate)}
+                <span className={`text-sm ${dDayColor(contract.moveInDate)}`}>
+                  {dDayLabel(contract.moveInDate)}
                 </span>
               )}
             </div>
@@ -222,8 +250,13 @@ const Home = () => {
             <h2 className="text-sm font-bold text-foreground">잔금대출 준비 현황</h2>
             <span className="text-xs text-muted-foreground">{doneCount}/{CHECKLIST_ITEMS.length}</span>
           </div>
-          <Progress value={progress} className="h-2 mb-4" />
-          <div className="space-y-2">
+          <Progress value={progress} className={`h-2 ${allDone ? "[&>div]:bg-green-500" : ""}`} />
+          {allDone && (
+            <p className="text-sm text-green-600 font-medium mt-2">
+              준비 완료! 잔금대출 준비가 모두 끝났습니다 🎉
+            </p>
+          )}
+          <div className={`space-y-2 ${allDone ? "mt-2" : "mt-4"}`}>
             {CHECKLIST_ITEMS.map((item, i) => {
               const done = !!checked[i];
               return (
@@ -263,21 +296,27 @@ const Home = () => {
             </button>
           </div>
           <div className="space-y-2">
-            {NOTICES.map((n) => (
-              <button
-                key={n.id}
-                onClick={() => setSelectedNotice(n)}
-                className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-                    {n.tag}
-                  </span>
-                  <span className="text-sm text-foreground">{n.title}</span>
-                </div>
-                <span className="text-xs text-muted-foreground flex-shrink-0 ml-2">{n.date.slice(5)}</span>
-              </button>
-            ))}
+            {NOTICES.map((n) => {
+              const badge = NOTICE_BADGE[n.category];
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => setSelectedNotice(n)}
+                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="text-xs font-medium px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: badge?.bg, color: badge?.text }}
+                    >
+                      {n.category}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{n.date}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-foreground mt-2">{n.title}</p>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -290,19 +329,25 @@ const Home = () => {
             </button>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            {PARTNERS.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPartner(p)}
-                className="flex-shrink-0 w-52 rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:shadow-md transition-shadow"
-              >
-                <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-                  {p.category}
-                </span>
-                <p className="text-sm font-bold text-foreground mt-2">{p.name}</p>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.tagline}</p>
-              </button>
-            ))}
+            {PARTNERS.map((p) => {
+              const badge = PARTNER_BADGE[p.category];
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPartner(p)}
+                  className="flex-shrink-0 w-52 rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <span
+                    className="text-xs font-medium px-2 py-0.5 rounded-full"
+                    style={{ backgroundColor: badge?.bg, color: badge?.text }}
+                  >
+                    {p.category}
+                  </span>
+                  <p className="text-sm font-bold text-foreground mt-2">{p.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.benefit}</p>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -312,9 +357,9 @@ const Home = () => {
         <DialogContent className="max-w-sm rounded-xl">
           <DialogHeader>
             <DialogTitle className="text-base">{selectedNotice?.title}</DialogTitle>
-            <DialogDescription className="text-xs">{selectedNotice?.date}</DialogDescription>
+            <DialogDescription className="text-xs">{selectedNotice?.date} · {selectedNotice?.category}</DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-foreground leading-relaxed">{selectedNotice?.content}</p>
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{selectedNotice?.content}</p>
         </DialogContent>
       </Dialog>
 
@@ -324,16 +369,21 @@ const Home = () => {
           <DialogHeader>
             <DialogTitle className="text-base">{selectedPartner?.name}</DialogTitle>
             <DialogDescription>
-              <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
-                {selectedPartner?.category}
-              </span>
+              {selectedPartner && (
+                <span
+                  className="text-xs font-medium px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: PARTNER_BADGE[selectedPartner.category]?.bg, color: PARTNER_BADGE[selectedPartner.category]?.text }}
+                >
+                  {selectedPartner.category}
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-foreground leading-relaxed">{selectedPartner?.desc}</p>
+          <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{selectedPartner?.description}</p>
           <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
             <Phone className="w-4 h-4" />
-            <a href={`tel:${selectedPartner?.tel}`} className="text-accent font-medium">
-              {selectedPartner?.tel}
+            <a href={`tel:${selectedPartner?.phone}`} className="text-accent font-medium">
+              {selectedPartner?.phone}
             </a>
           </div>
         </DialogContent>
