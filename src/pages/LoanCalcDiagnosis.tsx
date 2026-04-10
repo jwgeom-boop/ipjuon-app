@@ -93,6 +93,7 @@ const LoanCalcDiagnosis = () => {
   // Step 4
   const [hasExistingLoan, setHasExistingLoan] = useState<boolean | null>(null);
   const [existingMonthlyRaw, setExistingMonthlyRaw] = useState("");
+  const [financialSector, setFinancialSector] = useState<"first" | "second" | null>(null);
   const [creditGrade, setCreditGrade] = useState<number | null>(null);
   const [hasOverdue, setHasOverdue] = useState(false);
 
@@ -110,7 +111,7 @@ const LoanCalcDiagnosis = () => {
   let recognizedIncome = Math.round(income * incomeRate);
   if (tenure === "under6") recognizedIncome = Math.round(recognizedIncome * 0.9);
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
-  const dsrPct = creditGrade && creditGrade <= 4 ? 0.4 : 0.5;
+  const dsrPct = financialSector === "first" ? 0.4 : financialSector === "second" ? 0.5 : 0.4;
   const inputRate = parseFloat(rateInput) || 0;
   const rateAdd = creditGrade ? (GRADE_INFO[creditGrade]?.rateAdd || 0) : 0;
   const effectiveRate = inputRate + rateAdd;
@@ -141,6 +142,7 @@ const LoanCalcDiagnosis = () => {
   const warnings: string[] = [];
   if (tenure === "under6") warnings.push("재직 6개월 미만: 소득 10% 차감 적용. 6개월 이후 재신청 시 한도 증가.");
   if (creditGrade && creditGrade >= 5 && creditGrade <= 8) warnings.push(`신용등급 ${creditGrade}등급: 금리 +${rateAdd}%p 가산. 실적용금리 약 ${effectiveRate.toFixed(2)}%`);
+  if (financialSector === "second" && creditGrade && creditGrade >= 7) warnings.push(`⚠️ 신용등급 ${creditGrade}등급은 2금융권에서도 한도 제한 또는 고금리가 적용될 수 있습니다.`);
   if (desired > 0 && desired > appliedLimit) warnings.push("희망금액이 심사 한도를 초과합니다.");
   if (existingMonthly > 0 && recognizedIncome > 0 && (existingMonthly * 12) / recognizedIncome > 0.35) {
     const dsrRatio = Math.round((existingMonthly * 12) / recognizedIncome * 100);
@@ -156,7 +158,7 @@ const LoanCalcDiagnosis = () => {
   const step1Valid = price > 0 && location !== null && regulated !== null;
   const step2Valid = firstTime !== null && housingCount !== null;
   const step3Valid = incomeType !== null && income > 0 && tenure !== null;
-  const step4Valid = hasExistingLoan !== null && creditGrade !== null;
+  const step4Valid = hasExistingLoan !== null && financialSector !== null && creditGrade !== null;
   const step5Valid = inputRate > 0;
 
   const canNext = [false, step1Valid, step2Valid, step3Valid, step4Valid, step5Valid][step];
@@ -377,6 +379,39 @@ const LoanCalcDiagnosis = () => {
               )}
             </Field>
 
+            <Field label="대출 신청 금융기관">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setFinancialSector("first")}
+                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "first" ? "bg-primary/10 border-primary" : "bg-card border-border"}`}
+                >
+                  <p className="text-sm font-semibold text-foreground">🏦 1금융권</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">시중은행·특수은행</p>
+                  <p className="text-[11px] text-muted-foreground">DSR 40% 적용</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">KB·신한·하나·우리·농협 등</p>
+                </button>
+                <button
+                  onClick={() => setFinancialSector("second")}
+                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "second" ? "bg-orange-100 border-orange-400" : "bg-card border-border"}`}
+                >
+                  <p className="text-sm font-semibold text-foreground">🏢 2금융권</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">저축은행·캐피탈·보험사</p>
+                  <p className="text-[11px] text-muted-foreground">DSR 50% 적용</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">SBI·OK·한국투자 등</p>
+                </button>
+              </div>
+              {financialSector === "first" && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 mt-2">
+                  <p className="text-[12px] text-foreground">연간 총 원리금이 연소득의 40% 이내로 제한됩니다. 한도는 낮지만 금리가 유리합니다.</p>
+                </div>
+              )}
+              {financialSector === "second" && (
+                <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 mt-2">
+                  <p className="text-[12px] text-orange-800">연간 총 원리금이 연소득의 50% 이내로 제한됩니다. 한도는 높지만 금리가 상대적으로 높습니다.</p>
+                </div>
+              )}
+            </Field>
+
             <Field label="신용등급 (KCB / 나이스)">
               <div className="grid grid-cols-5 gap-1.5">
                 {[1, 2, 3, 4, 5].map(g => (
@@ -487,7 +522,8 @@ const LoanCalcDiagnosis = () => {
                   <p className="text-[32px] font-extrabold mt-2">{toEok(appliedLimit)}</p>
                   <div className="mt-3 pt-3 border-t border-white/20 space-y-1 text-sm">
                     <div className="flex justify-between"><span className="opacity-70">LTV 한도</span><span>{toEok(ltvLimit)}</span></div>
-                    <div className="flex justify-between"><span className="opacity-70">DSR 한도</span><span>{toEok(dsrLimit)}</span></div>
+                    <div className="flex justify-between"><span className="opacity-70">DSR 한도</span><span>{`DSR ${Math.round(dsrPct * 100)}% (${financialSector === "first" ? "1금융" : "2금융"} 기준)`}</span></div>
+                    <div className="flex justify-between"><span className="opacity-70">DSR 최대</span><span>{toEok(dsrLimit)}</span></div>
                     <div className="flex justify-between font-bold"><span>적용 한도</span><span>{toEok(appliedLimit)}</span></div>
                     <div className="flex justify-between"><span className="opacity-70">월 상환액</span><span>{monthly.toLocaleString()}만원</span></div>
                     <div className="flex justify-between"><span className="opacity-70">총 이자</span><span>{toEok(Math.max(0, totalInterest))}</span></div>
@@ -530,10 +566,10 @@ const LoanCalcDiagnosis = () => {
                 ]} />
 
                 <DetailCard title="💰 DSR·소득 심사" headerColor="bg-green-600" items={[
+                  ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권"} (DSR ${Math.round(dsrPct * 100)}%)`],
                   ["소득유형", `${INCOME_TYPES.find(t => t.key === incomeType)?.label} (인정률 ${Math.round(incomeRate * 100)}%)`],
                   ["연소득", toEok(income)],
                   ["인정소득", toEok(recognizedIncome)],
-                  ["DSR 기준", `${Math.round(dsrPct * 100)}%`],
                   ["기존대출 상환액", `${existingMonthly.toLocaleString()}만원/월`],
                   ["DSR 최대 한도", toEok(dsrLimit)],
                 ]} />
