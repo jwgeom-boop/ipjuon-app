@@ -111,7 +111,7 @@ const LoanCalcDiagnosis = () => {
   let recognizedIncome = Math.round(income * incomeRate);
   if (tenure === "under6") recognizedIncome = Math.round(recognizedIncome * 0.9);
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
-  const dsrPct = creditGrade && creditGrade <= 4 ? 0.4 : 0.5;
+  const dsrPct = financialSector === "first" ? 0.4 : financialSector === "second" ? 0.5 : 0.4;
   const inputRate = parseFloat(rateInput) || 0;
   const rateAdd = creditGrade ? (GRADE_INFO[creditGrade]?.rateAdd || 0) : 0;
   const effectiveRate = inputRate + rateAdd;
