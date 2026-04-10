@@ -47,7 +47,7 @@ export function getUnreadCount(): number {
 
 export function checkDdayAlerts() {
   try {
-    const contract = JSON.parse(localStorage.getItem("ipjuon_contract") || "{}");
+    const contract = JSON.parse(localStorage.getItem(STORAGE_KEYS.contract) || "{}");
     if (!contract.moveInDate) return;
 
     const today = new Date();
@@ -85,6 +85,29 @@ export function checkDdayAlerts() {
           read: false,
           link: "payment",
         });
+      }
+    }
+
+    // Checklist reminder (once, when D-60 or less and incomplete items exist)
+    if (daysLeft <= 60) {
+      const already = notifications.some(n => n.type === "checklist");
+      if (!already) {
+        try {
+          const checklist: boolean[] = JSON.parse(localStorage.getItem(STORAGE_KEYS.checklist) || "[]");
+          const totalItems = 5; // matches CHECKLIST_ITEMS length in Home
+          const doneCount = checklist.filter(Boolean).length;
+          const remaining = totalItems - doneCount;
+          if (remaining > 0) {
+            addNotification({
+              type: "checklist",
+              title: "잔금대출 준비 체크리스트",
+              body: `미완료 항목이 ${remaining}개 있습니다. 지금 확인해 보세요.`,
+              date: today.toISOString(),
+              read: false,
+              link: "home_checklist",
+            });
+          }
+        } catch { /* ignore */ }
       }
     }
 
