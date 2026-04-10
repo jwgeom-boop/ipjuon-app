@@ -374,11 +374,9 @@ const Home = () => {
                       <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                     )}
                   </button>
-                  {isOpen && (
-                    <div className="border-t border-gray-100" style={{ backgroundColor: "#F8FAFC" }}>
-                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line p-4">
-                        {tip.content}
-                      </p>
+                  {openTipId === tip.id && (
+                    <div className="px-4 pb-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line border-t border-gray-100 pt-3 bg-slate-50 rounded-b-xl">
+                      {tip.content}
                     </div>
                   )}
                 </div>
