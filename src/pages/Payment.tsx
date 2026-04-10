@@ -1,507 +1,429 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Check, Plus, X } from "lucide-react";
+import { Pencil, Plus, Trash2, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import BottomTabBar from "@/components/BottomTabBar";
 
-const parseNum = (v: string | number) => Number(String(v).replace(/\D/g, "")) || 0;
-const fmtNum = (v: string) => v.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-const toEok = (manwon: number) => {
-  const eok = Math.floor(manwon / 10000);
-  const rest = manwon % 10000;
-  if (eok > 0 && rest > 0) return `${eok}억 ${rest.toLocaleString()}만원`;
+// ── Types ──
+interface PaymentItem {
+  id: string;
+  label: string;
+  amount: number;
+  dueDate: string;
+  paidDate?: string;
+  status: "완료" | "예정" | "연체";
+  memo?: string;
+}
+
+interface PaymentData {
+  salePrice: number;
+  items: PaymentItem[];
+}
+
+// ── Helpers ──
+function toEok(won: number): string {
+  const eok = Math.floor(won / 100000000);
+  const man = Math.floor((won % 100000000) / 10000);
+  if (eok > 0 && man > 0) return `${eok}억 ${man.toLocaleString()}만원`;
   if (eok > 0) return `${eok}억원`;
-  return `${manwon.toLocaleString()}만원`;
-};
-const fmtDate = (d: string | undefined) => {
-  if (!d) return "";
-  const date = new Date(d);
-  return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일`;
-};
-const diffDays = (d: string | undefined) => {
-  if (!d) return null;
+  if (man > 0) return `${man.toLocaleString()}만원`;
+  return "0원";
+}
+
+function toManwon(won: number): string {
+  const man = Math.round(won / 10000);
+  return `${man.toLocaleString()}만원`;
+}
+
+function fmtDate(d: string): string {
+  return d.replace(/-/g, ".");
+}
+
+function diffDays(d: string): number {
   const target = new Date(d);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   target.setHours(0, 0, 0, 0);
   return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-};
-
-interface CustomItem {
-  name: string;
-  amount: number;
-  date: string;
-  paid: boolean;
 }
 
+function fmtNum(v: string): string {
+  const num = v.replace(/[^0-9]/g, "");
+  if (!num) return "";
+  return parseInt(num, 10).toLocaleString();
+}
+
+function uid(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+// ── Default Data ──
+const DEFAULT_PAYMENT_DATA: PaymentData = {
+  salePrice: 350000000,
+  items: [
+    { id: "1", label: "계약금", amount: 35000000, dueDate: "2024-03-15", paidDate: "2024-03-15", status: "완료" },
+    { id: "2", label: "중도금 1차", amount: 35000000, dueDate: "2024-06-15", paidDate: "2024-06-12", status: "완료" },
+    { id: "3", label: "중도금 2차", amount: 35000000, dueDate: "2024-09-15", paidDate: "2024-09-15", status: "완료" },
+    { id: "4", label: "중도금 3차", amount: 35000000, dueDate: "2024-12-15", paidDate: "2024-12-14", status: "완료" },
+    { id: "5", label: "중도금 4차", amount: 35000000, dueDate: "2025-03-15", paidDate: "2025-03-15", status: "완료" },
+    { id: "6", label: "중도금 5차", amount: 35000000, dueDate: "2025-06-15", paidDate: "2025-06-15", status: "완료" },
+    { id: "7", label: "중도금 6차", amount: 35000000, dueDate: "2025-09-15", paidDate: "2025-09-15", status: "완료" },
+    { id: "8", label: "중도금 이자", amount: 12000000, dueDate: "2025-09-15", paidDate: "2025-09-15", status: "완료" },
+    { id: "9", label: "옵션비", amount: 8000000, dueDate: "2024-06-15", paidDate: "2024-06-15", status: "완료" },
+    { id: "10", label: "발코니 확장비", amount: 5000000, dueDate: "2024-06-15", paidDate: "2024-06-15", status: "완료" },
+    { id: "11", label: "잔금", amount: 120000000, dueDate: "2026-06-15", status: "예정" },
+  ],
+};
+
+const STORAGE_KEY = "ipjuon_payments";
+
+function loadPayments(): PaymentData {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return DEFAULT_PAYMENT_DATA;
+}
+
+function savePayments(data: PaymentData) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  // Also update cost result for cost calculator sync
+  const paidTotal = data.items.filter(i => i.status === "완료").reduce((s, i) => s + i.amount, 0);
+  sessionStorage.setItem("ipjuon_cost_result", JSON.stringify({
+    salePrice: data.salePrice,
+    paidAmount: paidTotal,
+  }));
+}
+
+// ── Component ──
 const Payment = () => {
   const navigate = useNavigate();
+  const [data, setData] = useState<PaymentData>(loadPayments);
+  const [editing, setEditing] = useState(false);
+  const [editData, setEditData] = useState<PaymentData | null>(null);
+  const [detailItem, setDetailItem] = useState<PaymentItem | null>(null);
+  const [detailMemo, setDetailMemo] = useState("");
 
-  const [contract, setContract] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("contractInfo") || "null");
-    } catch {
-      return null;
-    }
-  });
-
-  const [customItems, setCustomItems] = useState<CustomItem[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("paymentCustomItems") || "[]");
-    } catch {
-      return [];
-    }
-  });
-
-  const [requestedIds, setRequestedIds] = useState<Set<string>>(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem("paymentRequested") || "[]"));
-    } catch {
-      return new Set();
-    }
-  });
-
-  // Bottom sheet state
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newAmountRaw, setNewAmountRaw] = useState("");
-  const [newDate, setNewDate] = useState("");
-
-  const saveContract = useCallback((updated: any) => {
-    setContract(updated);
-    localStorage.setItem("contractInfo", JSON.stringify(updated));
+  const contract = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
   }, []);
 
-  const saveCustomItems = useCallback((items: CustomItem[]) => {
-    setCustomItems(items);
-    localStorage.setItem("paymentCustomItems", JSON.stringify(items));
-  }, []);
+  const paidTotal = useMemo(() => data.items.filter(i => i.status === "완료").reduce((s, i) => s + i.amount, 0), [data]);
+  const balance = data.salePrice - paidTotal;
+  const paidRatio = data.salePrice > 0 ? Math.round((paidTotal / data.salePrice) * 100) : 0;
 
-  const markRequested = useCallback((id: string) => {
-    setRequestedIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      localStorage.setItem("paymentRequested", JSON.stringify([...next]));
-      return next;
+  // Find 잔금 item for D-day
+  const balanceItem = data.items.find(i => i.label === "잔금" && i.status === "예정");
+  const dDay = balanceItem ? diffDays(balanceItem.dueDate) : null;
+
+  // ── Edit Mode ──
+  const startEdit = () => {
+    setEditData(JSON.parse(JSON.stringify(data)));
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditData(null);
+    setEditing(false);
+  };
+
+  const saveEdit = () => {
+    if (!editData) return;
+    setData(editData);
+    savePayments(editData);
+    setEditData(null);
+    setEditing(false);
+    toast.success("납부 정보가 저장되었습니다.");
+  };
+
+  const updateEditItem = (id: string, patch: Partial<PaymentItem>) => {
+    if (!editData) return;
+    setEditData({
+      ...editData,
+      items: editData.items.map(i => i.id === id ? { ...i, ...patch } : i),
     });
-    toast.success("요청이 접수되었습니다.");
-  }, []);
+  };
 
-  // Summary calculations
-  const summary = useMemo(() => {
-    if (!contract) return { total: 0, paid: 0, unpaid: 0, interest: 0 };
-    let total = 0;
-    let paid = 0;
+  const deleteEditItem = (id: string) => {
+    if (!editData) return;
+    setEditData({ ...editData, items: editData.items.filter(i => i.id !== id) });
+  };
 
-    // 계약금
-    const ca = contract.contractAmt || 0;
-    total += ca;
-    if (contract.contractPaid) paid += ca;
-
-    // 중도금
-    (contract.midPayments || []).forEach((m: any) => {
-      const amt = parseNum(m.amount);
-      total += amt;
-      if (m.paid) paid += amt;
+  const addEditItem = () => {
+    if (!editData) return;
+    setEditData({
+      ...editData,
+      items: [...editData.items, { id: uid(), label: "", amount: 0, dueDate: "", status: "예정" }],
     });
-
-    // 잔금
-    const ba = contract.balanceAmt || 0;
-    total += ba;
-
-    // 옵션
-    (contract.options || []).forEach((o: any) => {
-      const amt = parseNum(o.amount);
-      total += amt;
-    });
-
-    // 이자
-    let interest = 0;
-    if (contract.midMethod === "loan") {
-      if (contract.quarterlyInterests) {
-        interest = contract.quarterlyInterests.reduce((s: number, q: any) => s + parseNum(q.amount), 0);
-      } else if (contract.totalInterest) {
-        interest = parseNum(contract.totalInterest);
-      }
-    }
-
-    // Custom items
-    customItems.forEach((ci) => {
-      total += ci.amount;
-      if (ci.paid) paid += ci.amount;
-    });
-
-    return { total, paid, unpaid: total - paid, interest };
-  }, [contract, customItems]);
-
-  const toggleContractPaid = (val: boolean) => {
-    saveContract({ ...contract, contractPaid: val });
   };
 
-  const toggleMidPaid = (idx: number, val: boolean) => {
-    const mids = [...(contract.midPayments || [])];
-    mids[idx] = { ...mids[idx], paid: val };
-    saveContract({ ...contract, midPayments: mids });
+  // ── Detail Modal ──
+  const openDetail = (item: PaymentItem) => {
+    setDetailItem(item);
+    setDetailMemo(item.memo || "");
   };
 
-  const toggleBalancePaid = (val: boolean) => {
-    saveContract({ ...contract, balancePaid: val });
+  const saveMemo = () => {
+    if (!detailItem) return;
+    const updated = {
+      ...data,
+      items: data.items.map(i => i.id === detailItem.id ? { ...i, memo: detailMemo } : i),
+    };
+    setData(updated);
+    savePayments(updated);
+    setDetailItem(null);
+    toast.success("메모가 저장되었습니다.");
   };
 
-  const toggleOptionPaid = (idx: number, val: boolean) => {
-    const opts = [...(contract.options || [])];
-    opts[idx] = { ...opts[idx], paid: val };
-    saveContract({ ...contract, options: opts });
-  };
+  const complexInfo = contract ? `${contract.complex || "아파트"} ${contract.dong || ""}동 ${contract.ho || ""}호` : null;
 
-  const toggleQuarterlyPaid = (idx: number, val: boolean) => {
-    const qi = [...(contract.quarterlyInterests || [])];
-    qi[idx] = { ...qi[idx], paid: val };
-    saveContract({ ...contract, quarterlyInterests: qi });
-  };
-
-  const toggleCustomPaid = (idx: number, val: boolean) => {
-    const items = [...customItems];
-    items[idx] = { ...items[idx], paid: val };
-    saveCustomItems(items);
-  };
-
-  const addCustomItem = () => {
-    if (!newName || !newAmountRaw) return;
-    const items = [...customItems, { name: newName, amount: parseNum(newAmountRaw), date: newDate, paid: false }];
-    saveCustomItems(items);
-    setNewName("");
-    setNewAmountRaw("");
-    setNewDate("");
-    setSheetOpen(false);
-  };
-
+  // ── No contract registered ──
   if (!contract) {
     return (
       <div className="app-shell min-h-screen bg-background pb-20">
-        <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3 flex items-center justify-between">
+        <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3">
           <h1 className="text-lg font-bold text-foreground">납부 현황</h1>
-          <button onClick={() => navigate("/notifications")} className="relative p-1">
-            <Bell className="h-6 w-6 text-foreground" />
-          </button>
         </header>
         <div className="flex flex-col items-center justify-center h-[60vh] text-center px-6">
           <div className="text-5xl mb-4">💳</div>
-          <p className="text-base font-bold text-foreground mb-2">납부 현황을 관리하려면</p>
-          <p className="text-sm text-muted-foreground mb-6">계약 정보를 등록해주세요</p>
-          <Button onClick={() => navigate("/contract-info")}>계약 정보 등록하기</Button>
+          <p className="text-base font-bold text-foreground mb-2">아파트 정보를 등록해주세요</p>
+          <p className="text-sm text-muted-foreground mb-6">마이 탭에서 계약 정보를 등록하면 납부 현황을 관리할 수 있어요</p>
+          <button onClick={() => navigate("/my")} className="flex items-center gap-1 text-sm text-primary font-semibold">
+            마이 탭에서 등록하기 <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
         <BottomTabBar />
       </div>
     );
   }
 
-  // Contract exists but no payment structure (priceOnly)
-  const hasMidPayments = (contract.midPayments || []).length > 0;
+  // ── Edit Mode View ──
+  if (editing && editData) {
+    return (
+      <div className="app-shell min-h-screen bg-background pb-20">
+        <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3 flex items-center justify-between">
+          <button onClick={cancelEdit} className="text-sm text-muted-foreground font-medium">취소</button>
+          <h1 className="text-base font-bold text-foreground">납부 항목 수정</h1>
+          <button onClick={saveEdit} className="text-sm text-primary font-bold">저장</button>
+        </header>
 
+        <div className="px-4 py-4 space-y-3">
+          {editData.items.map((item) => (
+            <div key={item.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  value={item.label}
+                  onChange={e => updateEditItem(item.id, { label: e.target.value })}
+                  placeholder="항목명"
+                  className="h-9 text-sm flex-1"
+                />
+                <button onClick={() => deleteEditItem(item.id)} className="p-1 text-muted-foreground hover:text-destructive">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] text-muted-foreground">금액 (원)</label>
+                  <Input
+                    inputMode="numeric"
+                    value={item.amount ? item.amount.toLocaleString() : ""}
+                    onChange={e => updateEditItem(item.id, { amount: parseInt(e.target.value.replace(/,/g, ""), 10) || 0 })}
+                    placeholder="0"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-muted-foreground">납부일</label>
+                  <Input
+                    type="date"
+                    value={item.dueDate}
+                    onChange={e => updateEditItem(item.id, { dueDate: e.target.value })}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {(["완료", "예정", "연체"] as const).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => updateEditItem(item.id, { status: s, paidDate: s === "완료" ? item.dueDate : undefined })}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${item.status === s
+                      ? s === "완료" ? "bg-green-100 border-green-300 text-green-700"
+                        : s === "연체" ? "bg-red-100 border-red-300 text-red-700"
+                        : "bg-orange-100 border-orange-300 text-orange-700"
+                      : "bg-card border-border text-muted-foreground"
+                    }`}
+                  >
+                    {s === "완료" ? "✅ 완료" : s === "예정" ? "⏳ 예정" : "🔴 연체"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <button onClick={addEditItem} className="w-full py-3 text-sm font-medium text-primary flex items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-card hover:bg-muted transition-colors">
+            <Plus className="w-4 h-4" /> 항목 추가
+          </button>
+        </div>
+        <BottomTabBar />
+      </div>
+    );
+  }
+
+  // ── Normal View ──
   return (
     <div className="app-shell min-h-screen bg-background pb-20">
-      {/* Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold text-foreground">납부 현황</h1>
-        <button onClick={() => navigate("/notifications")} className="relative p-1">
-          <Bell className="h-6 w-6 text-foreground" />
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-            2
-          </span>
+        <button onClick={startEdit} className="text-sm text-primary font-medium flex items-center gap-0.5">
+          <Pencil className="w-3.5 h-3.5" /> 수정
         </button>
       </header>
 
       <div className="px-4 py-5 space-y-5">
-        {/* Missing detail banner */}
-        {(contract.priceOnly || !hasMidPayments) && (
-          <button
-            onClick={() => navigate("/contract-info")}
-            className="w-full rounded-lg bg-accent/10 border border-accent/30 px-4 py-3 text-left"
-          >
-            <p className="text-xs text-foreground font-medium">납부 항목 상세 정보를 추가해주세요 →</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">계약금·중도금 정보를 등록하면 정확한 관리가 가능합니다</p>
-          </button>
-        )}
-        {/* 상단 요약 4칸 */}
-        <div
-          className="rounded-[18px] px-4 py-4 grid grid-cols-2 gap-3 text-primary-foreground"
-          style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
-        >
-          <SummaryCell label="총 납부 예정" value={toEok(summary.total)} />
-          <SummaryCell label="납부 완료" value={toEok(summary.paid)} />
-          <SummaryCell label="미납 잔액" value={toEok(summary.unpaid)} />
-          <SummaryCell label="이자 납부액" value={summary.interest > 0 ? toEok(summary.interest) : "—"} />
+        {/* Section 1: Summary Card */}
+        <div className="rounded-[14px] border border-border bg-card p-4 space-y-3">
+          <p className="text-sm font-bold text-foreground">🏠 {complexInfo}</p>
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">분양가</span>
+              <span className="font-medium text-foreground">{toEok(data.salePrice)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">납부 완료</span>
+              <span className="font-medium text-foreground">{toEok(paidTotal)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="font-bold text-foreground">잔금 (미납)</span>
+              <span className="font-bold text-primary">{toEok(balance)}</span>
+            </div>
+          </div>
+          <div>
+            <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+              <span>납부 진행률</span>
+              <span>{paidRatio}%</span>
+            </div>
+            <Progress value={paidRatio} className="h-2.5" />
+          </div>
         </div>
 
-        {/* ── 계약금 ── */}
-        <Section title="계약금">
-          <PaymentCard
-            title="계약금"
-            amount={contract.contractAmt || 0}
-            paid={!!contract.contractPaid}
-            onToggle={toggleContractPaid}
-          />
-        </Section>
-
-        {/* ── 중도금 ── */}
-        {(contract.midPayments || []).length > 0 && (
-          <Section title="중도금">
-            {(contract.midPayments || []).map((m: any, i: number) => {
-              const d = diffDays(m.date);
-              const overdue = d !== null && d < 0 && !m.paid;
-              const soon = d !== null && d >= 0 && d <= 7 && !m.paid;
-              return (
-                <PaymentCard
-                  key={i}
-                  title={`중도금 ${i + 1}차`}
-                  amount={parseNum(m.amount)}
-                  date={fmtDate(m.date)}
-                  paid={!!m.paid}
-                  onToggle={(v) => toggleMidPaid(i, v)}
-                  badges={[
-                    ...(contract.midMethod === "loan" ? [{ text: "대출", color: "bg-primary text-primary-foreground" }] : []),
-                    ...(soon ? [{ text: `D-${d}`, color: "bg-orange-100 text-orange-700" }] : []),
-                    ...(overdue ? [{ text: "납부 지연", color: "bg-destructive/10 text-destructive" }] : []),
-                  ]}
-                  overdue={overdue}
-                />
-              );
-            })}
-          </Section>
-        )}
-
-        {/* ── 중도금 이자 ── */}
-        {contract.midMethod === "loan" && (
-          <Section title="중도금 이자">
-            {contract.quarterlyInterests && contract.quarterlyInterests.length > 0 ? (
-              contract.quarterlyInterests.map((qi: any, i: number) => (
-                <PaymentCard
-                  key={i}
-                  title={`이자 ${i + 1}회차`}
-                  amount={parseNum(qi.amount)}
-                  date={fmtDate(qi.date)}
-                  paid={!!qi.paid}
-                  onToggle={(v) => toggleQuarterlyPaid(i, v)}
-                  showRequest={!qi.paid}
-                  requested={requestedIds.has(`interest-${i}`)}
-                  onRequest={() => markRequested(`interest-${i}`)}
-                />
-              ))
-            ) : contract.totalInterest ? (
-              <PaymentCard
-                title="중도금 이자 (총액)"
-                amount={parseNum(contract.totalInterest)}
-                paid={false}
-                onToggle={() => {}}
-              />
-            ) : null}
-          </Section>
-        )}
-
-        {/* ── 잔금 ── */}
-        <Section title="잔금">
-          <div className={`app-card border-2 ${contract.balancePaid ? "border-green-300 bg-green-50/30" : "border-primary/40 bg-primary/5"}`}>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <p className="text-base font-bold text-foreground">잔금</p>
-                <p className="text-xl font-extrabold text-primary mt-1">{toEok(contract.balanceAmt || 0)}</p>
-                {contract.balanceDate && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {fmtDate(contract.balanceDate)} (입주 예정일)
-                  </p>
-                )}
-              </div>
-              <Switch checked={!!contract.balancePaid} onCheckedChange={toggleBalancePaid} />
-            </div>
-            {contract.balancePaid && (
-              <div className="flex items-center gap-1 mt-2">
-                <Check className="w-4 h-4 text-green-600" />
-                <span className="text-xs text-green-700 font-medium">납부 완료</span>
-              </div>
-            )}
-            {!contract.balancePaid && (
-              <div className="mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  disabled={requestedIds.has("balance")}
-                  onClick={() => markRequested("balance")}
-                >
-                  {requestedIds.has("balance") ? "요청됨 ✓" : "납부 확인 요청"}
-                </Button>
-              </div>
-            )}
+        {/* Section 2: Payment Items */}
+        <div>
+          <h2 className="text-sm font-bold text-foreground mb-3">납부 항목 상세</h2>
+          <div className="space-y-2.5">
+            {data.items.map(item => (
+              <button
+                key={item.id}
+                onClick={() => openDetail(item)}
+                className={`w-full text-left rounded-xl p-3.5 border-l-4 transition-colors ${
+                  item.status === "완료"
+                    ? "bg-card border-l-green-500 border border-border"
+                    : item.status === "연체"
+                    ? "bg-red-50 border-l-red-500 border border-red-200"
+                    : "bg-[hsl(48,100%,96%)] border-l-orange-400 border border-orange-200"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-foreground">{item.label}</span>
+                  <span className={`text-xs font-medium ${
+                    item.status === "완료" ? "text-green-600" : item.status === "연체" ? "text-red-600" : "text-orange-600"
+                  }`}>
+                    {item.status === "완료" ? "✅ 완료" : item.status === "연체" ? "🔴 연체" : "⏳ 예정"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-sm font-bold text-foreground">{toManwon(item.amount)}</span>
+                  <span className="text-xs text-muted-foreground">{fmtDate(item.dueDate)}</span>
+                </div>
+              </button>
+            ))}
           </div>
-        </Section>
+        </div>
 
-        {/* ── 옵션 항목 ── */}
-        {(contract.options || []).length > 0 && (
-          <Section title="옵션 항목">
-            {(contract.options || []).map((opt: any, i: number) => (
-              <PaymentCard
-                key={i}
-                title={opt.customLabel || opt.label}
-                amount={parseNum(opt.amount)}
-                paid={!!opt.paid}
-                onToggle={(v) => toggleOptionPaid(i, v)}
-              />
-            ))}
-          </Section>
+        {/* Section 3: D-Day */}
+        {balanceItem && dDay !== null && (
+          <div className={`rounded-[14px] p-5 text-center ${
+            dDay <= 7 ? "bg-red-50 border border-red-200"
+              : dDay <= 30 ? "bg-[hsl(40,100%,96%)] border border-orange-200"
+              : "bg-card border border-border"
+          }`}>
+            <p className="text-xs text-muted-foreground">잔금 납부 예정일</p>
+            <p className="text-sm font-bold text-foreground mt-1">
+              {balanceItem.dueDate.replace(/-/g, "년 ").replace(/-/, "월 ")}일
+            </p>
+            <p className={`text-3xl font-extrabold mt-3 ${
+              dDay <= 7 ? "text-red-600" : dDay <= 30 ? "text-orange-600" : "text-primary"
+            }`}>
+              D - {dDay}
+            </p>
+            <div className="mt-4">
+              <p className="text-xs text-muted-foreground">💡 잔금대출 준비를 미리 시작하세요</p>
+              <button
+                onClick={() => navigate("/loan")}
+                className="mt-2 text-sm text-primary font-semibold flex items-center gap-0.5 mx-auto"
+              >
+                대출 한도 계산하기 <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         )}
-
-        {/* ── 직접 추가 항목 ── */}
-        {customItems.length > 0 && (
-          <Section title="직접 추가">
-            {customItems.map((ci, i) => (
-              <PaymentCard
-                key={i}
-                title={ci.name}
-                amount={ci.amount}
-                date={ci.date ? fmtDate(ci.date) : undefined}
-                paid={ci.paid}
-                onToggle={(v) => toggleCustomPaid(i, v)}
-              />
-            ))}
-          </Section>
-        )}
-
-        {/* + 항목 직접 추가 */}
-        <Button
-          variant="outline"
-          className="w-full h-11 text-sm font-medium border-dashed"
-          onClick={() => setSheetOpen(true)}
-        >
-          <Plus className="w-4 h-4 mr-1" /> 항목 직접 추가
-        </Button>
       </div>
 
-      {/* Bottom Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-[18px] max-w-[430px] mx-auto">
-          <SheetHeader>
-            <SheetTitle>항목 추가</SheetTitle>
-          </SheetHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-foreground">항목명</label>
-              <Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="예: 추가 공사비" className="h-10 mt-1" />
+      {/* Detail Modal */}
+      <Dialog open={!!detailItem} onOpenChange={(open) => !open && setDetailItem(null)}>
+        <DialogContent className="max-w-[360px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">{detailItem?.label}</DialogTitle>
+            <DialogDescription>납부 상세 정보</DialogDescription>
+          </DialogHeader>
+          {detailItem && (
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">금액</span>
+                <span className="font-medium text-foreground">{toManwon(detailItem.amount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">납부 예정일</span>
+                <span className="font-medium text-foreground">{fmtDate(detailItem.dueDate)}</span>
+              </div>
+              {detailItem.paidDate && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">납부 완료일</span>
+                  <span className="font-medium text-foreground">{fmtDate(detailItem.paidDate)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">상태</span>
+                <span className={`font-medium ${
+                  detailItem.status === "완료" ? "text-green-600" : detailItem.status === "연체" ? "text-red-600" : "text-orange-600"
+                }`}>{detailItem.status}</span>
+              </div>
+              <div className="space-y-1.5 pt-2 border-t border-border">
+                <label className="text-sm font-medium text-foreground">메모</label>
+                <Input
+                  value={detailMemo}
+                  onChange={e => setDetailMemo(e.target.value)}
+                  placeholder="메모를 입력하세요 (선택)"
+                  className="h-10"
+                />
+              </div>
+              <Button className="w-full h-10 text-sm font-semibold" onClick={saveMemo}>
+                저장
+              </Button>
             </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">금액 (만원)</label>
-              <Input value={newAmountRaw} onChange={(e) => setNewAmountRaw(fmtNum(e.target.value))} placeholder="0" className="h-10 mt-1" inputMode="numeric" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">납부 예정일</label>
-              <Input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="h-10 mt-1" />
-            </div>
-            <Button className="w-full h-11" disabled={!newName || !newAmountRaw} onClick={addCustomItem}>
-              저장
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <BottomTabBar />
     </div>
   );
 };
-
-/* ── Sub-components ── */
-
-function SummaryCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="text-center">
-      <p className="text-[11px] opacity-70">{label}</p>
-      <p className="text-sm font-bold mt-0.5">{value}</p>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-2.5">
-      <h2 className="text-sm font-bold text-foreground">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-interface Badge {
-  text: string;
-  color: string;
-}
-
-function PaymentCard({
-  title,
-  amount,
-  date,
-  paid,
-  onToggle,
-  badges = [],
-  overdue = false,
-  showRequest = false,
-  requested = false,
-  onRequest,
-}: {
-  title: string;
-  amount: number;
-  date?: string;
-  paid: boolean;
-  onToggle: (v: boolean) => void;
-  badges?: Badge[];
-  overdue?: boolean;
-  showRequest?: boolean;
-  requested?: boolean;
-  onRequest?: () => void;
-}) {
-  return (
-    <div
-      className={`app-card transition-colors ${
-        paid ? "bg-green-50/50 border border-green-200" : overdue ? "border-2 border-destructive/40" : ""
-      }`}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-semibold text-foreground">{title}</p>
-            {badges.map((b, i) => (
-              <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${b.color}`}>
-                {b.text}
-              </span>
-            ))}
-          </div>
-          <p className="text-base font-bold text-foreground mt-1">{toEok(amount)}</p>
-          {date && <p className="text-xs text-muted-foreground mt-0.5">{date}</p>}
-        </div>
-        <Switch checked={paid} onCheckedChange={onToggle} />
-      </div>
-      {paid && (
-        <div className="flex items-center gap-1 mt-2">
-          <Check className="w-3.5 h-3.5 text-green-600" />
-          <span className="text-[11px] text-green-700 font-medium">납부 완료</span>
-        </div>
-      )}
-      {showRequest && !paid && (
-        <div className="mt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs h-7"
-            disabled={requested}
-            onClick={onRequest}
-          >
-            {requested ? "요청됨 ✓" : "납부 확인 요청"}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default Payment;
