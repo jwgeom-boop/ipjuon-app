@@ -10,6 +10,12 @@ const formatPhone = (value: string) => {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 };
 
+const maskPhone = (phone: string) => {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 11) return phone;
+  return `${digits.slice(0, 3)}-****-${digits.slice(7)}`;
+};
+
 const Login = () => {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
@@ -68,6 +74,10 @@ const Login = () => {
   };
 
   const handleVerify = () => {
+    // MVP: 000000이면 무조건 통과
+    const code = otp.join("");
+    if (code !== "000000") return;
+
     localStorage.setItem("auth_token", "demo_token");
     const done = localStorage.getItem("onboarding_done");
     navigate(done ? "/home" : "/onboarding", { replace: true });
@@ -80,13 +90,10 @@ const Login = () => {
     <div className="app-shell flex flex-col min-h-screen bg-background px-6 pt-16">
       {/* Logo */}
       <div className="text-center mb-10">
-        <h1 className="text-2xl font-bold">
-          <span className="text-primary">입주</span>
-          <span className="text-accent">ON</span>
-        </h1>
+        <h1 className="text-xl font-bold text-primary">입주ON</h1>
       </div>
 
-      <h2 className="text-xl font-bold text-foreground mb-1">전화번호로 시작하기</h2>
+      <h2 className="text-xl font-bold text-foreground mb-1">전화번호로 간편 로그인</h2>
       <p className="text-sm text-muted-foreground mb-8">
         별도 회원가입 없이 바로 이용하세요
       </p>
@@ -109,14 +116,21 @@ const Login = () => {
         인증번호 받기
       </Button>
 
+      <p className="text-xs text-muted-foreground text-center mt-3">
+        전화번호는 로그인에만 사용되며 저장되지 않습니다
+      </p>
+
       {/* OTP section */}
       {showOtp && (
         <div className="mt-8 animate-slide-down">
-          <p className="text-sm font-medium text-foreground mb-4">
+          <p className="text-sm font-medium text-foreground mb-1">
             인증번호를 입력해주세요
           </p>
+          <p className="text-xs text-muted-foreground mb-4">
+            {maskPhone(phone)}로 인증번호를 보냈습니다
+          </p>
 
-          <div className="flex gap-2 mb-3">
+          <div className="flex gap-2 mb-3 justify-center">
             {otp.map((d, i) => (
               <input
                 key={i}
@@ -132,7 +146,7 @@ const Login = () => {
             ))}
           </div>
 
-          <p className={`text-sm font-medium mb-4 ${timer < 60 ? "text-destructive" : "text-muted-foreground"}`}>
+          <p className={`text-sm font-medium mb-4 text-center ${timer < 60 ? "text-destructive" : "text-muted-foreground"}`}>
             {mm}:{ss}
           </p>
 
@@ -142,13 +156,13 @@ const Login = () => {
             style={{ opacity: otpFilled ? 1 : 0.4 }}
             onClick={handleVerify}
           >
-            인증 확인
+            확인
           </Button>
 
           <button
             onClick={handleResend}
             disabled={timer > 0}
-            className={`w-full text-center text-sm ${timer > 0 ? "text-muted-foreground/50 cursor-not-allowed" : "text-primary underline cursor-pointer"}`}
+            className={`w-full text-center text-sm ${timer > 0 ? "text-muted-foreground/50 cursor-not-allowed" : "text-accent underline cursor-pointer"}`}
           >
             인증번호 재발송
           </button>

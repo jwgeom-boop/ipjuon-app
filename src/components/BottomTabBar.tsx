@@ -1,10 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { Home, Landmark, Receipt, User } from "lucide-react";
 
 const tabs = [
-  { path: "/home", label: "홈", icon: "🏠" },
-  { path: "/loan", label: "대출", icon: "🏦" },
-  { path: "/payment", label: "납부", icon: "💳" },
-  { path: "/my", label: "마이", icon: "👤" },
+  { path: "/home", label: "홈", icon: Home },
+  { path: "/loan", label: "대출", icon: Landmark },
+  { path: "/payment", label: "납부", icon: Receipt },
+  { path: "/my", label: "마이", icon: User },
 ];
 
 const BottomTabBar = () => {
@@ -15,7 +16,8 @@ const BottomTabBar = () => {
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-card border-t border-border">
       <div className="flex">
         {tabs.map((tab) => {
-          const active = location.pathname === tab.path;
+          const active = location.pathname === tab.path || location.pathname.startsWith(tab.path + "/");
+          const Icon = tab.icon;
           return (
             <button
               key={tab.path}
@@ -24,7 +26,7 @@ const BottomTabBar = () => {
                 active ? "text-primary font-semibold" : "text-tab-inactive"
               }`}
             >
-              <span className="text-xl mb-0.5">{tab.icon}</span>
+              <Icon className="w-5 h-5 mb-0.5" />
               {tab.label}
             </button>
           );
