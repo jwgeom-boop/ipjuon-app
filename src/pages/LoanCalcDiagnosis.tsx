@@ -412,6 +412,7 @@ const LoanCalcDiagnosis = () => {
               )}
             </Field>
 
+            <Field label="신용등급 (KCB / 나이스)">
               <div className="grid grid-cols-5 gap-1.5">
                 {[1, 2, 3, 4, 5].map(g => (
                   <button key={g} onClick={() => setCreditGrade(g)}
