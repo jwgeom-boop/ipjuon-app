@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronRight, ChevronDown, ChevronUp, X, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import BottomTabBar from "@/components/BottomTabBar";
-import { ALL_BANKS, getBanksForComplex, type BankInfo } from "@/data/bankData";
+import { ALL_BANKS, getBanksForComplex, searchComplexes, type BankInfo } from "@/data/bankData";
 
 const TIME_OPTIONS = ["오전", "오후", "저녁"];
 const DEFAULT_VISIBLE = 2;
@@ -22,11 +22,19 @@ const LoanMain = () => {
   const [consultTime, setConsultTime] = useState<string | null>(null);
   const [rateOpen, setRateOpen] = useState(false);
 
+  // Search state for unregistered users
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchSelectedComplex, setSearchSelectedComplex] = useState<string | null>(null);
+
   const contract = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("contractInfo") || "null"); } catch { return null; }
   }, []);
 
-  const complexMatch = useMemo(() => getBanksForComplex(contract?.danjiName), [contract]);
+  const registeredComplexName = contract?.danjiName || null;
+  const activeComplexName = searchSelectedComplex || registeredComplexName;
+
+  const complexMatch = useMemo(() => getBanksForComplex(activeComplexName), [activeComplexName]);
+  const searchResults = useMemo(() => searchQuery.length >= 1 ? searchComplexes(searchQuery) : [], [searchQuery]);
 
   const banks1 = complexMatch ? complexMatch.banks1 : ALL_BANKS.filter(b => b.type === "1금융");
   const banks2 = complexMatch ? complexMatch.banks2 : ALL_BANKS.filter(b => b.type === "2금융");
@@ -49,6 +57,26 @@ const LoanMain = () => {
     setConsultTime(null);
   };
 
+  const handleSelectComplex = (name: string) => {
+    setSearchSelectedComplex(name);
+    setSearchQuery("");
+  };
+
+  const handleSaveComplex = () => {
+    if (!searchSelectedComplex) return;
+    const existing = contract || {};
+    const updated = { ...existing, danjiName: searchSelectedComplex };
+    localStorage.setItem("contractInfo", JSON.stringify(updated));
+    toast.success(`${searchSelectedComplex} 단지 정보가 저장되었습니다.`);
+    // Force re-render by reloading
+    window.location.reload();
+  };
+
+  const handleClearSearch = () => {
+    setSearchSelectedComplex(null);
+    setSearchQuery("");
+  };
+
   return (
     <div className="app-shell min-h-screen bg-background pb-20">
       <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3">
@@ -63,11 +91,66 @@ const LoanMain = () => {
           <p className="text-xs opacity-80 mt-1">수수료 없이 무료로 최적 상품을 안내해드립니다</p>
         </div>
 
-        {/* Filtered notice */}
-        {isFiltered && (
-          <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
-            <p className="text-[13px] text-foreground font-medium">🏠 {contract.danjiName} 참여 금융기관</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
+        {/* Complex match / unmatch banner */}
+        {isFiltered ? (
+          <div className="rounded-[14px] bg-primary/5 border border-primary/15 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[13px] text-foreground font-semibold">🏠 {activeComplexName} 참여 금융기관</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지의 집단대출 협약 은행입니다</p>
+              </div>
+              {searchSelectedComplex && (
+                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                  <Button size="sm" className="h-7 text-xs px-3" onClick={handleSaveComplex}>이 단지로 저장</Button>
+                  <button onClick={handleClearSearch} className="text-muted-foreground"><X className="w-4 h-4" /></button>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="rounded-[14px] bg-muted border border-border px-4 py-3">
+              <p className="text-[13px] text-foreground font-medium">ℹ️ 단지 정보가 없어 전체 협약은행을 표시합니다</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">단지명을 등록하면 참여 은행만 확인할 수 있어요</p>
+              <button
+                onClick={() => navigate("/contract-info")}
+                className="mt-2 text-xs text-primary font-medium flex items-center gap-0.5"
+              >
+                단지 정보 등록 <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setSearchSelectedComplex(null); }}
+                placeholder="단지명을 입력해 참여 은행을 확인하세요"
+                className="h-11 pl-9"
+              />
+              {searchResults.length > 0 && !searchSelectedComplex && (
+                <div className="absolute top-full left-0 right-0 z-20 mt-1 rounded-lg bg-card border border-border shadow-lg overflow-hidden">
+                  {searchResults.map(c => (
+                    <button
+                      key={c.complex}
+                      onClick={() => handleSelectComplex(c.complex)}
+                      className="w-full px-4 py-3 text-left hover:bg-muted transition-colors border-b border-border last:border-b-0"
+                    >
+                      <p className="text-sm font-medium text-foreground">🏠 {c.complex}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        참여 은행 {c.banks.length}개 · {c.banks.map(b => b.name).join(", ")}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {searchQuery.length >= 1 && searchResults.length === 0 && !searchSelectedComplex && (
+                <div className="absolute top-full left-0 right-0 z-20 mt-1 rounded-lg bg-card border border-border shadow-lg px-4 py-3">
+                  <p className="text-sm text-muted-foreground">일치하는 단지가 없습니다</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -77,10 +160,7 @@ const LoanMain = () => {
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-foreground">🏦 1금융권 (DSR 40%)</p>
               {banks1.length > DEFAULT_VISIBLE && (
-                <button
-                  onClick={() => setShow1All(!show1All)}
-                  className="flex items-center gap-0.5 text-xs text-primary font-medium"
-                >
+                <button onClick={() => setShow1All(!show1All)} className="flex items-center gap-0.5 text-xs text-primary font-medium">
                   {show1All ? <>접기 <ChevronUp className="w-3.5 h-3.5" /></> : <>전체보기 <ChevronRight className="w-3.5 h-3.5" /></>}
                 </button>
               )}
@@ -108,10 +188,7 @@ const LoanMain = () => {
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-bold text-foreground">🏢 상호금융 (DSR 50%)</p>
               {banks2.length > DEFAULT_VISIBLE && (
-                <button
-                  onClick={() => setShow2All(!show2All)}
-                  className="flex items-center gap-0.5 text-xs text-primary font-medium"
-                >
+                <button onClick={() => setShow2All(!show2All)} className="flex items-center gap-0.5 text-xs text-primary font-medium">
                   {show2All ? <>접기 <ChevronUp className="w-3.5 h-3.5" /></> : <>전체보기 <ChevronRight className="w-3.5 h-3.5" /></>}
                 </button>
               )}
