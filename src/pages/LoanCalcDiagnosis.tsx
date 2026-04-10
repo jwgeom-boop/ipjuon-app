@@ -93,6 +93,7 @@ const LoanCalcDiagnosis = () => {
   // Step 4
   const [hasExistingLoan, setHasExistingLoan] = useState<boolean | null>(null);
   const [existingMonthlyRaw, setExistingMonthlyRaw] = useState("");
+  const [financialSector, setFinancialSector] = useState<"first" | "second" | null>(null);
   const [creditGrade, setCreditGrade] = useState<number | null>(null);
   const [hasOverdue, setHasOverdue] = useState(false);
 
