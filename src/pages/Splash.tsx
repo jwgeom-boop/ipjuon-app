@@ -6,7 +6,15 @@ const Splash = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate("/onboarding", { replace: true });
+      const hasAuth = localStorage.getItem("auth_token");
+      const onboarded = localStorage.getItem("ipjuon_onboarded");
+      if (hasAuth) {
+        navigate("/home", { replace: true });
+      } else if (onboarded) {
+        navigate("/login", { replace: true });
+      } else {
+        navigate("/onboarding", { replace: true });
+      }
     }, 1500);
     return () => clearTimeout(timer);
   }, [navigate]);

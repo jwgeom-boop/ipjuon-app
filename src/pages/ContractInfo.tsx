@@ -41,37 +41,38 @@ const ContractInfo = () => {
   // Load existing data
   const existing = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem("contractInfo") || "null");
+      return JSON.parse(localStorage.getItem("ipjuon_contract") || "null");
     } catch {
       return null;
     }
   }, []);
 
-  const [danjiName, setDanjiName] = useState(existing?.danjiName || "");
+  const [danjiName, setDanjiName] = useState(existing?.complex || existing?.danjiName || "");
   const [dong, setDong] = useState(existing?.dong || "");
   const [ho, setHo] = useState(existing?.ho || "");
-  const [priceRaw, setPriceRaw] = useState(existing?.price ? fmtNum(String(existing.price)) : "");
-  const [appraisalRaw, setAppraisalRaw] = useState(existing?.appraisalPrice ? fmtNum(String(existing.appraisalPrice)) : "");
+  const [priceRaw, setPriceRaw] = useState(existing?.salePrice ? fmtNum(String(Math.round(existing.salePrice / 10000))) : (existing?.price ? fmtNum(String(existing.price)) : ""));
+  const [appraisalRaw, setAppraisalRaw] = useState(existing?.appraisalPrice ? fmtNum(String(Math.round(existing.appraisalPrice / 10000))) : "");
   const [moveInDate, setMoveInDate] = useState<Date | undefined>(existing?.moveInDate ? new Date(existing.moveInDate) : undefined);
 
   const price = parseNum(priceRaw);
   const isValid = danjiName && dong && ho && price > 0 && moveInDate;
 
   const handleSave = () => {
-    const prev = existing || {};
+    const priceManwon = parseNum(priceRaw);
+    const appraisalManwon = parseNum(appraisalRaw);
     const info = {
-      ...prev,
-      danjiName,
+      complex: danjiName,
       dong,
       ho,
-      price,
-      appraisalPrice: parseNum(appraisalRaw) || undefined,
-      moveInDate,
-      priceOnly: false,
+      salePrice: priceManwon * 10000, // 원 단위로 저장
+      appraisalPrice: appraisalManwon ? appraisalManwon * 10000 : undefined,
+      moveInDate: moveInDate ? format(moveInDate, "yyyy-MM-dd") : undefined,
+      // Legacy compat fields for LoanCalcDiagnosis/LoanCostCalc (만원 단위)
+      danjiName,
+      price: priceManwon,
     };
-    localStorage.setItem("contractInfo", JSON.stringify(info));
-    // Clear dismissed state so home shows the D-Day card
-    localStorage.removeItem("home_prompt_dismissed");
+    localStorage.setItem("ipjuon_contract", JSON.stringify(info));
+    localStorage.removeItem("ipjuon_banner_closed");
     navigate("/home", { replace: true });
   };
 

@@ -79,7 +79,8 @@ const Login = () => {
     if (code !== "000000") return;
 
     localStorage.setItem("auth_token", "demo_token");
-    const done = localStorage.getItem("onboarding_done");
+    localStorage.setItem("user_phone", phone);
+    const done = localStorage.getItem("ipjuon_onboarded");
     navigate(done ? "/home" : "/onboarding", { replace: true });
   };
 

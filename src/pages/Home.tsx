@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Bell, Check, Phone } from "lucide-react";
 import { checkDdayAlerts, getUnreadCount } from "@/lib/notifications";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import NotificationCenter from "@/components/NotificationCenter";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -13,8 +14,9 @@ import {
 } from "@/components/ui/dialog";
 import BottomTabBar from "@/components/BottomTabBar";
 
-const CHECKLIST_KEY = "home_checklist";
-const CONTRACT_KEY = "ipjuon_contract";
+const CHECKLIST_KEY = STORAGE_KEYS.checklist;
+const CONTRACT_KEY = STORAGE_KEYS.contract;
+const BANNER_KEY = STORAGE_KEYS.bannerClosed;
 
 const CHECKLIST_ITEMS = [
   "잔금대출 한도 계산 완료",
@@ -105,7 +107,7 @@ const Home = () => {
   }, []);
 
   const [bannerVisible, setBannerVisible] = useState(
-    () => localStorage.getItem("home_banner_dismissed") !== "true"
+    () => localStorage.getItem(BANNER_KEY) !== "true"
   );
 
   const contract = useMemo(() => {
@@ -136,7 +138,7 @@ const Home = () => {
 
   const dismissBanner = () => {
     setBannerVisible(false);
-    localStorage.setItem("home_banner_dismissed", "true");
+    localStorage.setItem(BANNER_KEY, "true");
   };
 
   const doneCount = checked.filter(Boolean).length;
@@ -164,7 +166,7 @@ const Home = () => {
         {/* Section 1: Contract banner OR info card */}
         {showBanner && (
           <button
-            onClick={() => navigate("/contract-info")}
+            onClick={() => navigate("/my")}
             className="w-full rounded-xl px-4 py-3.5 bg-accent/10 text-left flex items-center justify-between gap-2"
           >
             <span className="text-sm text-foreground">
