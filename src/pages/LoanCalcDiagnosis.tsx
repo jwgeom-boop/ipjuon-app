@@ -142,7 +142,7 @@ const LoanCalcDiagnosis = () => {
   const warnings: string[] = [];
   if (tenure === "under6") warnings.push("재직 6개월 미만: 소득 10% 차감 적용. 6개월 이후 재신청 시 한도 증가.");
   if (creditGrade && creditGrade >= 5 && creditGrade <= 8) warnings.push(`신용등급 ${creditGrade}등급: 금리 +${rateAdd}%p 가산. 실적용금리 약 ${effectiveRate.toFixed(2)}%`);
-  if (financialSector === "second" && creditGrade && creditGrade >= 7) warnings.push(`⚠️ 신용등급 ${creditGrade}등급은 2금융권에서도 한도 제한 또는 고금리가 적용될 수 있습니다.`);
+  if (financialSector === "second" && creditGrade && creditGrade >= 7) warnings.push(`신용등급 ${creditGrade}등급은 상호금융에서도 한도 제한 또는 고금리가 적용될 수 있습니다.`);
   if (desired > 0 && desired > appliedLimit) warnings.push("희망금액이 심사 한도를 초과합니다.");
   if (existingMonthly > 0 && recognizedIncome > 0 && (existingMonthly * 12) / recognizedIncome > 0.35) {
     const dsrRatio = Math.round((existingMonthly * 12) / recognizedIncome * 100);
