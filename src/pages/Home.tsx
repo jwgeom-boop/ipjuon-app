@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Bell, Check, Phone } from "lucide-react";
+import { X, Bell, Phone, ChevronDown, ChevronUp } from "lucide-react";
 import { checkDdayAlerts, getUnreadCount } from "@/lib/notifications";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import NotificationCenter from "@/components/NotificationCenter";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -14,23 +13,138 @@ import {
 } from "@/components/ui/dialog";
 import BottomTabBar from "@/components/BottomTabBar";
 
-const CHECKLIST_KEY = STORAGE_KEYS.checklist;
 const CONTRACT_KEY = STORAGE_KEYS.contract;
 const BANNER_KEY = STORAGE_KEYS.bannerClosed;
-
-const CHECKLIST_ITEMS = [
-  "잔금대출 한도 계산 완료",
-  "협약은행 확인 완료",
-  "소득 서류 준비 (근로소득원천징수영수증 등)",
-  "등기권리증 준비",
-  "납부 일정 확인 완료",
-];
 
 const QUICK_MENU = [
   { icon: "🧮", label: "잔금대출 계산", to: "/loan/calc/step1" },
   { icon: "🏦", label: "협약은행 확인", to: "/loan" },
   { icon: "📋", label: "납부 현황", to: "/payment" },
   { icon: "📢", label: "공지사항", to: "/notices" },
+];
+
+const TIPS = [
+  {
+    id: 1,
+    icon: "📊",
+    title: "LTV란 무엇인가요?",
+    summary: "담보인정비율 — 집값 대비 대출 가능 금액",
+    content: `LTV(Loan To Value)는 집값 대비 대출 가능한 최대 비율입니다.
+
+예시) 분양가 3억원, LTV 70% → 최대 2억 1천만원 대출 가능
+
+주택 보유 수와 지역에 따라 다르게 적용됩니다.
+
+· 생애최초 1주택: 최대 80%
+· 일반 1주택: 최대 70%
+· 2주택 (비조정지역): 최대 60%
+· 2주택 (조정대상지역): 최대 30%
+
+※ 실제 한도는 감정가 확정 후 결정됩니다.`,
+  },
+  {
+    id: 2,
+    icon: "💰",
+    title: "DSR이 대출 한도에 미치는 영향",
+    summary: "연소득 대비 전체 대출 상환액 비율",
+    content: `DSR(Debt Service Ratio)은 연소득 대비 1년간 갚아야 할 모든 대출의 원리금 비율입니다.
+
+· 1금융권: 연소득의 40% 이내
+· 2금융권(상호금융): 연소득의 50% 이내
+
+예시) 연소득 5,000만원, 1금융권
+→ 연간 최대 상환액 2,000만원 (월 167만원)
+→ 기존 월 상환액 50만원이면
+→ 잔금대출 월 상환 가능액 117만원 이내
+
+기존 대출(신용대출, 자동차 할부 등)이 많을수록 한도가 줄어듭니다.`,
+  },
+  {
+    id: 3,
+    icon: "📋",
+    title: "잔금대출 필요 서류",
+    summary: "미리 준비하면 승인이 빨라져요",
+    content: `잔금대출 신청 시 일반적으로 필요한 서류입니다.
+
+공통 서류:
+· 신분증 (주민등록증 또는 운전면허증)
+· 주민등록등본 (3개월 이내 발급)
+· 인감증명서 + 인감도장
+· 분양계약서 사본
+
+소득 증빙 서류 (유형별):
+· 직장인: 근로소득 원천징수영수증, 재직증명서
+· 자영업자: 사업자등록증, 종합소득세 신고서
+· 프리랜서: 소득확인증명서
+
+※ 은행마다 요구 서류가 다를 수 있으니 사전 확인 필수`,
+  },
+  {
+    id: 4,
+    icon: "🏠",
+    title: "생애최초 주택 구입자 혜택",
+    summary: "처음 집을 사신다면 꼭 확인하세요",
+    content: `생애최초 주택 구입자는 다양한 우대 혜택을 받을 수 있습니다.
+
+대출 한도 우대:
+· LTV 최대 80% 적용 (일반 1주택 70% 대비 10% 높음)
+· 일부 협약은행 추가 우대 적용
+
+정책 대출 활용:
+· 디딤돌 대출: 연 2~3%대 저금리, 최대 2.5억
+· 보금자리론: 장기 고정금리, 최대 3.6억
+
+취득세 감면:
+· 1주택 생애최초: 200만원 한도 취득세 감면
+
+※ 본인 또는 배우자가 과거에 주택을 소유한 적 없어야 합니다.`,
+  },
+  {
+    id: 5,
+    icon: "📈",
+    title: "고정금리 vs 변동금리 선택법",
+    summary: "내 상황에 맞는 금리 유형은?",
+    content: `잔금대출 금리는 크게 고정금리와 변동금리로 나뉩니다.
+
+고정금리:
+· 대출 기간 동안 금리 변동 없음
+· 금리 상승기에 유리
+· 초기 금리가 변동금리보다 다소 높음
+· 장기 계획이 명확한 경우 추천
+
+변동금리:
+· 시장 금리에 따라 6개월마다 변동
+· 금리 하락기에 유리
+· 초기 금리가 낮아 부담 적음
+· 금리 상승 시 월 상환액 증가 위험
+
+혼합형:
+· 초기 3~5년 고정 후 변동 전환
+· 가장 일반적으로 선택하는 유형
+
+※ 현재 금리 환경과 본인의 상환 계획을 고려해 선택하세요.`,
+  },
+  {
+    id: 6,
+    icon: "⚠️",
+    title: "중도상환수수료 꼭 확인하세요",
+    summary: "조기 상환 시 추가 비용이 발생할 수 있어요",
+    content: `대출 만기 전에 미리 갚으면 중도상환수수료가 발생할 수 있습니다.
+
+일반적인 중도상환수수료:
+· 통상 대출 잔액의 0.5~1.5%
+· 대출 후 3년 이내 상환 시 주로 부과
+· 은행마다 기준이 다름
+
+절약 방법:
+· 일부 은행은 연간 원금의 10~20%까지 수수료 없이 상환 가능
+· 수수료 면제 조건 협약은행에 사전 확인
+· 3년 후 상환 계획이라면 수수료 면제 시점 계산
+
+예시) 잔금대출 1억, 수수료 1% → 중도상환 시 100만원 추가 발생
+
+※ 대출 계약 전 중도상환수수료 조건을 반드시 확인하세요.`,
+  },
 ];
 
 const NOTICES = [
@@ -127,6 +241,7 @@ const Home = () => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(getUnreadCount);
+  const [openTipId, setOpenTipId] = useState<number | null>(null);
 
   useEffect(() => {
     checkDdayAlerts();
@@ -145,32 +260,14 @@ const Home = () => {
     }
   }, []);
 
-  const [checked, setChecked] = useState<boolean[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem(CHECKLIST_KEY) || "[]") as boolean[];
-    } catch {
-      return [];
-    }
-  });
-
   const [selectedNotice, setSelectedNotice] = useState<(typeof NOTICES)[0] | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<(typeof PARTNERS)[0] | null>(null);
-
-  const toggleCheck = (i: number) => {
-    const next = [...checked];
-    next[i] = !next[i];
-    setChecked(next);
-    localStorage.setItem(CHECKLIST_KEY, JSON.stringify(next));
-  };
 
   const dismissBanner = () => {
     setBannerVisible(false);
     localStorage.setItem(BANNER_KEY, "true");
   };
 
-  const doneCount = checked.filter(Boolean).length;
-  const allDone = doneCount === CHECKLIST_ITEMS.length;
-  const progress = (doneCount / CHECKLIST_ITEMS.length) * 100;
   const showBanner = !contract && bannerVisible;
 
   return (
@@ -244,44 +341,47 @@ const Home = () => {
           ))}
         </div>
 
-        {/* Section 3: Checklist */}
+        {/* Section 3: 잔금대출 꿀팁 */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground">잔금대출 준비 현황</h2>
-            <span className="text-xs text-muted-foreground">{doneCount}/{CHECKLIST_ITEMS.length}</span>
+          <div className="mb-3">
+            <h2 className="text-sm font-bold text-foreground">잔금대출 꿀팁</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">클릭하면 자세한 내용을 확인할 수 있어요</p>
           </div>
-          <Progress value={progress} className={`h-2 ${allDone ? "[&>div]:bg-green-500" : ""}`} />
-          {allDone && (
-            <p className="text-sm text-green-600 font-medium mt-2">
-              준비 완료! 잔금대출 준비가 모두 끝났습니다 🎉
-            </p>
-          )}
-          <div className={`space-y-2 ${allDone ? "mt-2" : "mt-4"}`}>
-            {CHECKLIST_ITEMS.map((item, i) => {
-              const done = !!checked[i];
+          <div className="space-y-2">
+            {TIPS.map((tip) => {
+              const isOpen = openTipId === tip.id;
               return (
-                <button
-                  key={i}
-                  onClick={() => toggleCheck(i)}
-                  className="w-full flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors"
+                <div
+                  key={tip.id}
+                  className="rounded-xl border border-gray-100 bg-card shadow-sm overflow-hidden"
                 >
-                  <span
-                    className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                      done
-                        ? "bg-green-500 text-white"
-                        : "border-2 border-muted-foreground/30"
+                  <button
+                    onClick={() => setOpenTipId(isOpen ? null : tip.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                      isOpen ? "bg-[#EFF6FF]" : ""
                     }`}
                   >
-                    {done && <Check className="w-3 h-3" />}
-                  </span>
-                  <span
-                    className={`text-sm ${
-                      done ? "line-through text-muted-foreground" : "text-foreground"
-                    }`}
-                  >
-                    {item}
-                  </span>
-                </button>
+                    <span className="text-2xl flex-shrink-0">{tip.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold ${isOpen ? "text-[#1E3A5F]" : "text-foreground"}`}>
+                        {tip.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{tip.summary}</p>
+                    </div>
+                    {isOpen ? (
+                      <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    )}
+                  </button>
+                  {isOpen && (
+                    <div className="border-t border-gray-100" style={{ backgroundColor: "#F8FAFC" }}>
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line p-4">
+                        {tip.content}
+                      </p>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
