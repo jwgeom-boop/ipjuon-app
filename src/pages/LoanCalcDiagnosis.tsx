@@ -600,14 +600,24 @@ const LoanCalcDiagnosis = () => {
             <div className="space-y-3 pt-2">
               <Button
                 className="w-full h-12 text-base font-semibold"
-                style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
-                onClick={() => navigate("/loan/banks")}
+                style={{ background: "linear-gradient(135deg, hsl(var(--accent)), #92400E)" }}
+                onClick={() => navigate("/loan")}
               >
                 🏦 협약 금융기관 상담 신청하기
               </Button>
-              <Button variant="outline" className="w-full h-12 text-base font-semibold" onClick={handleRestart}>
-                🔄 다시 진단하기
+              <Button
+                variant="outline"
+                className="w-full h-10 text-sm"
+                onClick={() => navigate("/loan/cost-calc")}
+              >
+                💰 입주비용 계산기도 보기
               </Button>
+              <button
+                className="w-full text-center text-sm text-muted-foreground py-2 hover:text-foreground transition-colors"
+                onClick={handleRestart}
+              >
+                🔄 다시 진단하기
+              </button>
             </div>
           </>
         )}
