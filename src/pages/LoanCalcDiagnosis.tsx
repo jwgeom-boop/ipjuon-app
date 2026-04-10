@@ -379,7 +379,39 @@ const LoanCalcDiagnosis = () => {
               )}
             </Field>
 
-            <Field label="신용등급 (KCB / 나이스)">
+            <Field label="대출 신청 금융기관">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setFinancialSector("first")}
+                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "first" ? "bg-primary/10 border-primary" : "bg-card border-border"}`}
+                >
+                  <p className="text-sm font-semibold text-foreground">🏦 1금융권</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">시중은행·특수은행</p>
+                  <p className="text-[11px] text-muted-foreground">DSR 40% 적용</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">KB·신한·하나·우리·농협 등</p>
+                </button>
+                <button
+                  onClick={() => setFinancialSector("second")}
+                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "second" ? "bg-orange-100 border-orange-400" : "bg-card border-border"}`}
+                >
+                  <p className="text-sm font-semibold text-foreground">🏢 2금융권</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">저축은행·캐피탈·보험사</p>
+                  <p className="text-[11px] text-muted-foreground">DSR 50% 적용</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">SBI·OK·한국투자 등</p>
+                </button>
+              </div>
+              {financialSector === "first" && (
+                <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 mt-2">
+                  <p className="text-[12px] text-foreground">연간 총 원리금이 연소득의 40% 이내로 제한됩니다. 한도는 낮지만 금리가 유리합니다.</p>
+                </div>
+              )}
+              {financialSector === "second" && (
+                <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 mt-2">
+                  <p className="text-[12px] text-orange-800">연간 총 원리금이 연소득의 50% 이내로 제한됩니다. 한도는 높지만 금리가 상대적으로 높습니다.</p>
+                </div>
+              )}
+            </Field>
+
               <div className="grid grid-cols-5 gap-1.5">
                 {[1, 2, 3, 4, 5].map(g => (
                   <button key={g} onClick={() => setCreditGrade(g)}
