@@ -6,21 +6,19 @@ const Splash = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const token = localStorage.getItem("auth_token");
-      navigate(token ? "/home" : "/login", { replace: true });
+      navigate("/onboarding", { replace: true });
     }, 1500);
     return () => clearTimeout(timer);
   }, [navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-splash">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight">
-          <span className="text-primary-foreground">입주</span>
-          <span className="text-accent">ON</span>
+        <h1 className="text-4xl font-extrabold tracking-tight text-primary">
+          입주ON
         </h1>
-        <p className="mt-3 text-sm text-primary-foreground/70">
-          잔금대출·등기 원스톱 플랫폼
+        <p className="mt-3 text-sm text-muted-foreground">
+          잔금대출, 이제 쉽게 준비하세요
         </p>
       </div>
     </div>

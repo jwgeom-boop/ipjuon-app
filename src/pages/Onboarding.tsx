@@ -4,19 +4,19 @@ import { Button } from "@/components/ui/button";
 
 const slides = [
   {
+    icon: "🏠",
+    title: "잔금대출 한도, 직접 계산해보세요",
+    desc: "분양가·소득·부채 정보만 입력하면\n5단계로 대출 가능 금액을 알려드려요",
+  },
+  {
     icon: "🏦",
-    title: "잔금대출 한도\n지금 바로 계산해보세요",
-    desc: "분양가·소득·신용등급 입력하면\nLTV·DSR 기준 예상 한도를 알려드립니다",
+    title: "이 단지 협약은행 한눈에 확인",
+    desc: "단지별로 참여하는 은행과\n우대조건을 바로 확인하세요",
   },
   {
-    icon: "💰",
-    title: "취득세·등기·이사비\n총비용 한눈에",
-    desc: "입주에 필요한 모든 비용을\n자동으로 계산해드립니다",
-  },
-  {
-    icon: "🤝",
-    title: "협약 은행에\n바로 연결해드립니다",
-    desc: "KB·신한·하나·우리·농협\n전담 담당자가 직접 상담해드립니다",
+    icon: "📋",
+    title: "납부 일정도 한 곳에서",
+    desc: "계약금부터 잔금까지\n납부 현황을 직접 관리하세요",
   },
 ];
 
@@ -29,7 +29,7 @@ const Onboarding = () => {
     if (current < slides.length - 1) setCurrent(current + 1);
     else {
       localStorage.setItem("onboarding_done", "true");
-      navigate("/home", { replace: true });
+      navigate("/login", { replace: true });
     }
   };
 
@@ -49,7 +49,7 @@ const Onboarding = () => {
       {/* Skip */}
       {current < slides.length - 1 && (
         <button
-          onClick={() => { localStorage.setItem("onboarding_done", "true"); navigate("/home", { replace: true }); }}
+          onClick={() => { localStorage.setItem("onboarding_done", "true"); navigate("/login", { replace: true }); }}
           className="absolute top-6 right-6 text-sm text-muted-foreground z-10"
         >
           건너뛰기
