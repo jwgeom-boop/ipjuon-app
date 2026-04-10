@@ -113,9 +113,20 @@ const TOTAL_STEPS = 5;
 
 export default function LoanCalculator({ onClose }: Props) {
   const [step, setStep] = useState(1);
-  const [state, setState] = useState<CalcState>({
-    salePrice: "", paidAmount: "", houseType: null, tier: null,
-    incomeType: null, annualIncome: "", monthlyDebt: "", creditGrade: null,
+  const [state, setState] = useState<CalcState>(() => {
+    // Pre-fill from cost calculator if available
+    try {
+      const costResult = JSON.parse(sessionStorage.getItem("ipjuon_cost_result") || "null");
+      if (costResult) {
+        sessionStorage.removeItem("ipjuon_cost_result");
+        return {
+          salePrice: costResult.salePrice ? costResult.salePrice.toLocaleString() : "",
+          paidAmount: costResult.paidAmount ? costResult.paidAmount.toLocaleString() : "",
+          houseType: null, tier: null, incomeType: null, annualIncome: "", monthlyDebt: "", creditGrade: null,
+        };
+      }
+    } catch { /* ignore */ }
+    return { salePrice: "", paidAmount: "", houseType: null, tier: null, incomeType: null, annualIncome: "", monthlyDebt: "", creditGrade: null };
   });
 
   const upd = (patch: Partial<CalcState>) => setState(prev => ({ ...prev, ...patch }));

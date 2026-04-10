@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronRight, ChevronDown, ChevronUp, X, Phone } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronRight, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
 import BottomTabBar from "@/components/BottomTabBar";
-import { ALL_BANKS, getBanksForComplex, type BankInfo } from "@/data/bankData";
+import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
 import LoanCalculator from "@/components/LoanCalculator";
+import CostCalculator from "@/components/CostCalculator";
 import {
   Dialog,
   DialogContent,
@@ -14,37 +13,69 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const DEFAULT_VISIBLE = 2;
 
 const LoanMain = () => {
-  const navigate = useNavigate();
   const [show1All, setShow1All] = useState(false);
   const [show2All, setShow2All] = useState(false);
   const [phoneModal, setPhoneModal] = useState<BankInfo | null>(null);
   const [showCalc, setShowCalc] = useState(false);
+  const [showCostCalc, setShowCostCalc] = useState(false);
 
-  const contract = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
-  }, []);
+  // Complex selection – init from contract or default to first
+  const [selectedComplex, setSelectedComplex] = useState<string>(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem("ipjuon_contract") || "null");
+      if (c?.complex && COMPLEX_NAMES.includes(c.complex)) return c.complex;
+    } catch { /* ignore */ }
+    return COMPLEX_NAMES[0];
+  });
 
-  const complexName = contract?.complex || null;
-  const complexMatch = useMemo(() => getBanksForComplex(complexName), [complexName]);
+  const { banks1, banks2 } = useMemo(() => getBanksForComplex(selectedComplex), [selectedComplex]);
 
-  const banks1 = complexMatch ? complexMatch.banks1 : ALL_BANKS.filter(b => b.type === "1금융");
-  const banks2 = complexMatch ? complexMatch.banks2 : ALL_BANKS.filter(b => b.type === "2금융");
+  const handleComplexChange = (val: string) => {
+    setSelectedComplex(val);
+    setShow1All(false);
+    setShow2All(false);
+    // Sync to localStorage
+    try {
+      const existing = JSON.parse(localStorage.getItem("ipjuon_contract") || "{}");
+      localStorage.setItem("ipjuon_contract", JSON.stringify({ ...existing, complex: val }));
+    } catch { /* ignore */ }
+  };
 
   return (
     <div className="app-shell min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold text-foreground">대출 정보</h1>
-        {complexName ? (
-          <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">{complexName}</span>
-        ) : (
-          <span className="text-xs text-muted-foreground">단지 미설정</span>
-        )}
+        <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">{selectedComplex}</span>
       </header>
+
+      {/* Complex Selector */}
+      <div className="px-4 pt-4">
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-foreground whitespace-nowrap">단지 선택</label>
+          <Select value={selectedComplex} onValueChange={handleComplexChange}>
+            <SelectTrigger className="h-10 flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {COMPLEX_NAMES.map(name => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       <div className="px-4 py-5 space-y-6">
         {/* Section 1: 협약은행 */}
@@ -65,10 +96,7 @@ const LoanMain = () => {
                 <BankCard key={bank.name} bank={bank} onCall={() => setPhoneModal(bank)} />
               ))}
               {!show1All && banks1.length > DEFAULT_VISIBLE && (
-                <button
-                  onClick={() => setShow1All(true)}
-                  className="w-full py-2.5 text-sm font-medium text-primary flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
-                >
+                <button onClick={() => setShow1All(true)} className="w-full py-2.5 text-sm font-medium text-primary flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors">
                   1금융권 전체보기 ({banks1.length}개) <ChevronDown className="w-4 h-4" />
                 </button>
               )}
@@ -76,10 +104,7 @@ const LoanMain = () => {
                 <BankCard key={bank.name} bank={bank} onCall={() => setPhoneModal(bank)} />
               ))}
               {show1All && banks1.length > DEFAULT_VISIBLE && (
-                <button
-                  onClick={() => setShow1All(false)}
-                  className="w-full py-2.5 text-sm font-medium text-muted-foreground flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
-                >
+                <button onClick={() => setShow1All(false)} className="w-full py-2.5 text-sm font-medium text-muted-foreground flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors">
                   접기 <ChevronUp className="w-4 h-4" />
                 </button>
               )}
@@ -101,10 +126,7 @@ const LoanMain = () => {
                 <BankCard key={bank.name} bank={bank} onCall={() => setPhoneModal(bank)} />
               ))}
               {!show2All && banks2.length > DEFAULT_VISIBLE && (
-                <button
-                  onClick={() => setShow2All(true)}
-                  className="w-full py-2.5 text-sm font-medium text-primary flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
-                >
+                <button onClick={() => setShow2All(true)} className="w-full py-2.5 text-sm font-medium text-primary flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors">
                   2금융권 전체보기 ({banks2.length}개) <ChevronDown className="w-4 h-4" />
                 </button>
               )}
@@ -112,10 +134,7 @@ const LoanMain = () => {
                 <BankCard key={bank.name} bank={bank} onCall={() => setPhoneModal(bank)} />
               ))}
               {show2All && banks2.length > DEFAULT_VISIBLE && (
-                <button
-                  onClick={() => setShow2All(false)}
-                  className="w-full py-2.5 text-sm font-medium text-muted-foreground flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors"
-                >
+                <button onClick={() => setShow2All(false)} className="w-full py-2.5 text-sm font-medium text-muted-foreground flex items-center justify-center gap-1 rounded-lg border border-border bg-card hover:bg-muted transition-colors">
                   접기 <ChevronUp className="w-4 h-4" />
                 </button>
               )}
@@ -125,11 +144,10 @@ const LoanMain = () => {
 
         <div className="border-t border-border" />
 
-        {/* Section 3: Calculator */}
+        {/* Section 3: 잔금대출 계산기 */}
         <div>
           <h2 className="text-base font-bold text-foreground">잔금대출 한도 미리 계산해보기</h2>
           <p className="text-xs text-muted-foreground mt-0.5">대략적인 한도를 확인할 수 있어요</p>
-
           <div className="mt-3 rounded-[14px] border border-border bg-card p-4">
             <p className="text-2xl">🧮</p>
             <p className="text-sm font-bold text-foreground mt-2">잔금대출 자가진단</p>
@@ -138,6 +156,21 @@ const LoanMain = () => {
               계산 시작하기
             </Button>
           </div>
+        </div>
+
+        <div className="border-t border-border" />
+
+        {/* Section 4: 입주비용 계산기 */}
+        <div className="rounded-[14px] border border-border bg-card p-4">
+          <p className="text-2xl">📊</p>
+          <p className="text-sm font-bold text-foreground mt-2">입주비용 계산기</p>
+          <p className="text-[11px] text-muted-foreground mt-1">총 입주비용과 남은 납부금을 한눈에 확인하세요</p>
+          <button
+            onClick={() => setShowCostCalc(true)}
+            className="mt-3 flex items-center gap-0.5 text-sm text-primary font-semibold"
+          >
+            계산하기 <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
@@ -154,16 +187,17 @@ const LoanMain = () => {
           >
             <Phone className="w-4 h-4" /> {phoneModal?.phone} 전화 걸기
           </a>
-          <button
-            onClick={() => setPhoneModal(null)}
-            className="w-full text-sm text-muted-foreground py-2"
-          >
-            취소
-          </button>
+          <button onClick={() => setPhoneModal(null)} className="w-full text-sm text-muted-foreground py-2">취소</button>
         </DialogContent>
       </Dialog>
 
       {showCalc && <LoanCalculator onClose={() => setShowCalc(false)} />}
+      {showCostCalc && (
+        <CostCalculator
+          onClose={() => setShowCostCalc(false)}
+          onGoToLoanCalc={() => { setShowCostCalc(false); setShowCalc(true); }}
+        />
+      )}
 
       <BottomTabBar />
     </div>

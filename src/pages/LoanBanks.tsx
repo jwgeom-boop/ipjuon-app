@@ -4,7 +4,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ALL_BANKS, getBanksForComplex, type BankInfo } from "@/data/bankData";
+import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
 
 const TIME_OPTIONS = ["오전", "오후", "저녁"];
 
@@ -19,13 +19,11 @@ const LoanBanks = () => {
   const [consultTime, setConsultTime] = useState<string | null>(null);
 
   const contract = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("contractInfo") || "null"); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
   }, []);
 
-  const complexMatch = useMemo(() => getBanksForComplex(contract?.danjiName), [contract]);
-  const banks1 = complexMatch ? complexMatch.banks1 : ALL_BANKS.filter(b => b.type === "1금융");
-  const banks2 = complexMatch ? complexMatch.banks2 : ALL_BANKS.filter(b => b.type === "2금융");
-  const isFiltered = !!complexMatch;
+  const complexName = contract?.complex || COMPLEX_NAMES[0];
+  const { banks1, banks2 } = useMemo(() => getBanksForComplex(complexName), [complexName]);
 
   useEffect(() => {
     if (location.hash) {
@@ -58,12 +56,10 @@ const LoanBanks = () => {
       </header>
 
       <div className="px-4 py-5 space-y-5">
-        {isFiltered && (
-          <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
-            <p className="text-[13px] text-foreground font-medium">🏠 {contract.danjiName} 참여 금융기관</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
-          </div>
-        )}
+        <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
+          <p className="text-[13px] text-foreground font-medium">🏠 {complexName} 참여 금융기관</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
+        </div>
 
         {banks1.length > 0 && (
           <div id="1금융">
