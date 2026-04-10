@@ -522,7 +522,7 @@ const LoanCalcDiagnosis = () => {
                   <p className="text-[32px] font-extrabold mt-2">{toEok(appliedLimit)}</p>
                   <div className="mt-3 pt-3 border-t border-white/20 space-y-1 text-sm">
                     <div className="flex justify-between"><span className="opacity-70">LTV 한도</span><span>{toEok(ltvLimit)}</span></div>
-                    <div className="flex justify-between"><span className="opacity-70">DSR 한도</span><span>{`DSR ${Math.round(dsrPct * 100)}% (${financialSector === "first" ? "1금융" : "2금융"} 기준)`}</span></div>
+                    <div className="flex justify-between"><span className="opacity-70">DSR 한도</span><span>{`DSR ${Math.round(dsrPct * 100)}% (${financialSector === "first" ? "1금융" : "상호금융"} 기준)`}</span></div>
                     <div className="flex justify-between"><span className="opacity-70">DSR 최대</span><span>{toEok(dsrLimit)}</span></div>
                     <div className="flex justify-between font-bold"><span>적용 한도</span><span>{toEok(appliedLimit)}</span></div>
                     <div className="flex justify-between"><span className="opacity-70">월 상환액</span><span>{monthly.toLocaleString()}만원</span></div>
