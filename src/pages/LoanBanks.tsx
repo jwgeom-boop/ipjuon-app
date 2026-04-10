@@ -132,7 +132,7 @@ function BankCard({ bank, onConsult }: { bank: BankInfo; onConsult: () => void }
   return (
     <div className="rounded-[14px] border border-border bg-card p-4">
       <p className="text-base font-bold text-foreground">{bank.icon} {bank.name}</p>
-      <p className="text-sm text-primary font-semibold mt-1">예상 금리 {bank.rate}</p>
+      
       <div className="flex flex-wrap gap-1.5 mt-2">
         {bank.tags.map(tag => (
           <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent-foreground font-medium border border-accent/20">{tag}</span>
