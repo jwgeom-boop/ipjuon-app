@@ -4,7 +4,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ALL_BANKS, getBanksForComplex, type BankInfo } from "@/data/bankData";
+import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
 
 const TIME_OPTIONS = ["오전", "오후", "저녁"];
 
