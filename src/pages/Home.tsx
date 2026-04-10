@@ -242,6 +242,7 @@ const Home = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(getUnreadCount);
   const [openTipId, setOpenTipId] = useState<number | null>(null);
+  const [isTipSectionOpen, setIsTipSectionOpen] = useState(false);
 
   useEffect(() => {
     checkDdayAlerts();
@@ -343,48 +344,55 @@ const Home = () => {
 
         {/* Section 3: 잔금대출 꿀팁 */}
         <div>
-          <div className="mb-3">
-            <h2 className="text-sm font-bold text-foreground">잔금대출 꿀팁</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">클릭하면 자세한 내용을 확인할 수 있어요</p>
-          </div>
-          <div className="space-y-2">
-            {TIPS.map((tip) => {
-              const isOpen = openTipId === tip.id;
-              return (
-                <div
-                  key={tip.id}
-                  className="rounded-xl border border-gray-100 bg-card shadow-sm overflow-hidden"
-                >
-                  <button
-                    onClick={() => setOpenTipId(isOpen ? null : tip.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                      isOpen ? "bg-[#EFF6FF]" : ""
-                    }`}
-                  >
-                    <span className="text-2xl flex-shrink-0">{tip.icon}</span>
-                    <span className={`flex-1 text-sm font-semibold ${
-                      isOpen ? "text-[#1E3A5F]" : "text-foreground"
-                    }`}>
-                      {tip.title}
-                    </span>
-                    {isOpen
-                      ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    }
-                  </button>
+          {/* 섹션 헤더 — 항상 표시 */}
+          <button
+            onClick={() => setIsTipSectionOpen(!isTipSectionOpen)}
+            className="w-full flex items-center justify-between mb-3"
+          >
+            <div>
+              <h2 className="text-sm font-bold text-foreground text-left">잔금대출 꿀팁</h2>
+              <p className="text-xs text-muted-foreground mt-0.5 text-left">
+                클릭하면 자세한 내용을 확인할 수 있어요
+              </p>
+            </div>
+            {isTipSectionOpen
+              ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            }
+          </button>
 
-                  {isOpen && (
-                    <div className="px-4 pt-3 pb-4 border-t border-gray-100 bg-slate-50">
-                      <p className="text-xs text-gray-500 mb-2">{tip.summary}</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-                        {tip.content}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          {/* 팁 목록 — 섹션 열렸을 때만 표시 */}
+          {isTipSectionOpen && (
+            <div className="space-y-2">
+              {TIPS.map((tip) => {
+                const isOpen = openTipId === tip.id;
+                return (
+                  <div key={tip.id} className="rounded-xl border border-gray-100 bg-card shadow-sm overflow-hidden">
+                    <button
+                      onClick={() => setOpenTipId(isOpen ? null : tip.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isOpen ? "bg-[#EFF6FF]" : ""}`}
+                    >
+                      <span className="text-2xl flex-shrink-0">{tip.icon}</span>
+                      <span className={`flex-1 text-sm font-semibold ${isOpen ? "text-[#1E3A5F]" : "text-foreground"}`}>
+                        {tip.title}
+                      </span>
+                      {isOpen
+                        ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      }
+                    </button>
+
+                    {isOpen && (
+                      <div className="px-4 pt-3 pb-4 border-t border-gray-100 bg-slate-50">
+                        <p className="text-xs text-gray-500 mb-2">{tip.summary}</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{tip.content}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Section 4: Latest notices */}
