@@ -407,7 +407,7 @@ const LoanCalcDiagnosis = () => {
               )}
               {financialSector === "second" && (
                 <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 mt-2">
-                  <p className="text-[12px] text-orange-800">연간 총 원리금이 연소득의 50% 이내로 제한됩니다. 한도는 높지만 금리가 상대적으로 높습니다.</p>
+                  <p className="text-[12px] text-orange-800">연간 총 원리금이 연소득의 50% 이내로 제한됩니다. 새마을금고·지역농협·신협·산림조합 등 상호금융 기관에 해당합니다.</p>
                 </div>
               )}
             </Field>
