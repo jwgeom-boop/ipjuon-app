@@ -95,6 +95,14 @@ const dDay = (dateStr: string) => {
 
 const Home = () => {
   const navigate = useNavigate();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(getUnreadCount);
+
+  // Run D-day check on mount
+  useEffect(() => {
+    checkDdayAlerts();
+    setUnreadCount(getUnreadCount());
+  }, []);
 
   const [bannerVisible, setBannerVisible] = useState(
     () => localStorage.getItem("home_banner_dismissed") !== "true"
