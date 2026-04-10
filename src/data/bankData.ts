@@ -32,9 +32,14 @@ export const COMPLEX_BANK_MAP: ComplexData[] = [
   {
     complex: "스마트 아파트",
     banks: [
-      { name: "KB국민은행", tags: ["생애최초 우대"], type: "1금융" },
-      { name: "신한은행", tags: ["소득 우대"], type: "1금융" },
+      { name: "KB국민은행", tags: ["생애최초 우대", "소득 우대"], type: "1금융" },
+      { name: "신한은행", tags: ["소득 우대", "다자녀 우대"], type: "1금융" },
+      { name: "하나은행", tags: ["생애최초 우대"], type: "1금융" },
+      { name: "우리은행", tags: ["일반"], type: "1금융" },
       { name: "새마을금고", tags: ["한도 우대"], type: "2금융" },
+      { name: "지역농협", tags: ["농업인 우대"], type: "2금융" },
+      { name: "신협", tags: ["조합원 우대"], type: "2금융" },
+      { name: "산림조합", tags: ["일반"], type: "2금융" },
     ],
   },
   {
