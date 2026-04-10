@@ -362,19 +362,23 @@ const Home = () => {
                     }`}
                   >
                     <span className="text-2xl flex-shrink-0">{tip.icon}</span>
-                    <p className={`flex-1 min-w-0 text-sm font-semibold ${isOpen ? "text-[#1E3A5F]" : "text-foreground"}`}>
+                    <span className={`flex-1 text-sm font-semibold ${
+                      isOpen ? "text-[#1E3A5F]" : "text-foreground"
+                    }`}>
                       {tip.title}
-                    </p>
-                    {isOpen ? (
-                      <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    )}
+                    </span>
+                    {isOpen
+                      ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                      : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    }
                   </button>
-                  {openTipId === tip.id && (
-                    <div className="px-4 pb-4 text-sm leading-relaxed border-t border-gray-100 pt-3 bg-slate-50 rounded-b-xl">
-                      <p className="text-sm text-gray-500 mb-2">{tip.summary}</p>
-                      <p className="text-gray-700 whitespace-pre-line">{tip.content}</p>
+
+                  {isOpen && (
+                    <div className="px-4 pt-3 pb-4 border-t border-gray-100 bg-slate-50">
+                      <p className="text-xs text-gray-500 mb-2">{tip.summary}</p>
+                      <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+                        {tip.content}
+                      </p>
                     </div>
                   )}
                 </div>
