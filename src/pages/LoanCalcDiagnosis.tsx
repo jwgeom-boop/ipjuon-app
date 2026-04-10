@@ -395,9 +395,9 @@ const LoanCalcDiagnosis = () => {
                   className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "second" ? "bg-orange-100 border-orange-400" : "bg-card border-border"}`}
                 >
                   <p className="text-sm font-semibold text-foreground">🏢 2금융권</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">저축은행·캐피탈·보험사</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">상호금융</p>
                   <p className="text-[11px] text-muted-foreground">DSR 50% 적용</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">SBI·OK·한국투자 등</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">새마을금고·지역농협·신협·산림조합 등</p>
                 </button>
               </div>
               {financialSector === "first" && (
