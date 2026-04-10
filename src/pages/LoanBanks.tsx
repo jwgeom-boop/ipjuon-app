@@ -19,13 +19,11 @@ const LoanBanks = () => {
   const [consultTime, setConsultTime] = useState<string | null>(null);
 
   const contract = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("contractInfo") || "null"); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
   }, []);
 
-  const complexMatch = useMemo(() => getBanksForComplex(contract?.danjiName), [contract]);
-  const banks1 = complexMatch ? complexMatch.banks1 : ALL_BANKS.filter(b => b.type === "1금융");
-  const banks2 = complexMatch ? complexMatch.banks2 : ALL_BANKS.filter(b => b.type === "2금융");
-  const isFiltered = !!complexMatch;
+  const complexName = contract?.complex || COMPLEX_NAMES[0];
+  const { banks1, banks2 } = useMemo(() => getBanksForComplex(complexName), [complexName]);
 
   useEffect(() => {
     if (location.hash) {
