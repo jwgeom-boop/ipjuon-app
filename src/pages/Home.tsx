@@ -1,10 +1,19 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Bell, Check } from "lucide-react";
+import { X, Bell, Check, Phone } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import BottomTabBar from "@/components/BottomTabBar";
 
 const CHECKLIST_KEY = "home_checklist";
+const CONTRACT_KEY = "ipjuon_contract";
+
 const CHECKLIST_ITEMS = [
   "잔금대출 한도 계산 완료",
   "협약은행 확인 완료",
@@ -21,11 +30,53 @@ const QUICK_MENU = [
 ];
 
 const NOTICES = [
-  { id: 1, title: "4월 잔금 납부 안내", date: "2026-04-08", tag: "납부" },
-  { id: 2, title: "입주 사전 점검 일정 공지", date: "2026-04-05", tag: "공지" },
+  {
+    id: 1,
+    title: "4월 잔금 납부 안내",
+    date: "2026-04-08",
+    tag: "납부",
+    content:
+      "4월 잔금 납부 기한은 2026년 4월 30일까지입니다. 납부 계좌와 금액을 확인하시고 기한 내 납부 부탁드립니다. 기한 초과 시 연체료가 발생할 수 있습니다.",
+  },
+  {
+    id: 2,
+    title: "입주 사전 점검 일정 공지",
+    date: "2026-04-05",
+    tag: "공지",
+    content:
+      "입주 사전 점검은 2026년 5월 10일~12일 진행됩니다. 세대별 점검 시간표는 관리사무소에서 별도 안내 예정이오니 참고 바랍니다.",
+  },
 ];
 
-const toEok = (manwon: number) => {
+const PARTNERS = [
+  {
+    id: 1,
+    name: "빠른이사",
+    category: "이사",
+    tagline: "당일 예약 가능 · 전국 서비스",
+    tel: "02-1000-1001",
+    desc: "전국 어디든 빠르고 안전하게! 포장이사부터 원룸이사까지 전문 인력이 책임집니다. 입주ON 회원 10% 할인 적용.",
+  },
+  {
+    id: 2,
+    name: "홈스타일",
+    category: "인테리어",
+    tagline: "84㎡ 기본 패키지 1,250만원",
+    tel: "02-1000-2001",
+    desc: "합리적인 가격의 인테리어 패키지를 제공합니다. 주방·욕실·바닥 시공 전문. 입주ON 전용 50만원 할인.",
+  },
+  {
+    id: 3,
+    name: "세이프 법무사",
+    category: "등기",
+    tagline: "등기 원스톱 서비스",
+    tel: "02-1000-3001",
+    desc: "아파트 소유권 이전 등기를 빠르고 정확하게 처리해드립니다. 무료 상담 가능.",
+  },
+];
+
+const toEok = (won: number) => {
+  const manwon = Math.floor(won / 10000);
   const eok = Math.floor(manwon / 10000);
   const rest = manwon % 10000;
   if (eok > 0 && rest > 0) return `${eok}억 ${rest.toLocaleString()}만원`;
@@ -49,7 +100,7 @@ const Home = () => {
 
   const contract = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem("contractInfo") || "null");
+      return JSON.parse(localStorage.getItem(CONTRACT_KEY) || "null");
     } catch {
       return null;
     }
@@ -62,6 +113,9 @@ const Home = () => {
       return [];
     }
   });
+
+  const [selectedNotice, setSelectedNotice] = useState<(typeof NOTICES)[0] | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<(typeof PARTNERS)[0] | null>(null);
 
   const toggleCheck = (i: number) => {
     const next = [...checked];
@@ -119,10 +173,10 @@ const Home = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-base font-bold text-foreground">
-                  {contract.danjiName} {contract.dong}동 {contract.ho}호
+                  {contract.complex} {contract.dong}동 {contract.ho}호
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  분양가 {toEok(contract.price)}
+                  분양가 {toEok(contract.salePrice)} · 잔금 {toEok(contract.balance)}
                 </p>
               </div>
               {contract.moveInDate && (
@@ -175,9 +229,7 @@ const Home = () => {
                   </span>
                   <span
                     className={`text-sm ${
-                      done
-                        ? "line-through text-muted-foreground"
-                        : "text-foreground"
+                      done ? "line-through text-muted-foreground" : "text-foreground"
                     }`}
                   >
                     {item}
@@ -200,7 +252,7 @@ const Home = () => {
             {NOTICES.map((n) => (
               <button
                 key={n.id}
-                onClick={() => navigate("/notices")}
+                onClick={() => setSelectedNotice(n)}
                 className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
@@ -214,7 +266,64 @@ const Home = () => {
             ))}
           </div>
         </div>
+
+        {/* Section 5: Partner banners (horizontal scroll) */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground">제휴 업체</h2>
+            <button onClick={() => navigate("/partners")} className="text-xs text-accent font-medium">
+              전체보기 →
+            </button>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            {PARTNERS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setSelectedPartner(p)}
+                className="flex-shrink-0 w-52 rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:shadow-md transition-shadow"
+              >
+                <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
+                  {p.category}
+                </span>
+                <p className="text-sm font-bold text-foreground mt-2">{p.name}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.tagline}</p>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Notice detail modal */}
+      <Dialog open={!!selectedNotice} onOpenChange={() => setSelectedNotice(null)}>
+        <DialogContent className="max-w-sm rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">{selectedNotice?.title}</DialogTitle>
+            <DialogDescription className="text-xs">{selectedNotice?.date}</DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-foreground leading-relaxed">{selectedNotice?.content}</p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Partner detail modal */}
+      <Dialog open={!!selectedPartner} onOpenChange={() => setSelectedPartner(null)}>
+        <DialogContent className="max-w-sm rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-base">{selectedPartner?.name}</DialogTitle>
+            <DialogDescription>
+              <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded-full">
+                {selectedPartner?.category}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-foreground leading-relaxed">{selectedPartner?.desc}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+            <Phone className="w-4 h-4" />
+            <a href={`tel:${selectedPartner?.tel}`} className="text-accent font-medium">
+              {selectedPartner?.tel}
+            </a>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomTabBar />
     </div>
