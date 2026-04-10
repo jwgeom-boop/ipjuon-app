@@ -1,4 +1,5 @@
 // Notification types and D-day alert logic
+import { STORAGE_KEYS } from "./storageKeys";
 
 export interface AppNotification {
   id: string;
@@ -10,7 +11,7 @@ export interface AppNotification {
   link: "payment" | "notices" | "home_checklist" | "";
 }
 
-const STORAGE_KEY = "ipjuon_notifications";
+const STORAGE_KEY = STORAGE_KEYS.notifications;
 
 function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
