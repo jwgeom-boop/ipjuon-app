@@ -56,12 +56,10 @@ const LoanBanks = () => {
       </header>
 
       <div className="px-4 py-5 space-y-5">
-        {isFiltered && (
-          <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
-            <p className="text-[13px] text-foreground font-medium">🏠 {contract.danjiName} 참여 금융기관</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
-          </div>
-        )}
+        <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
+          <p className="text-[13px] text-foreground font-medium">🏠 {complexName} 참여 금융기관</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
+        </div>
 
         {banks1.length > 0 && (
           <div id="1금융">
