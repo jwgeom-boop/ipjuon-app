@@ -27,8 +27,8 @@ const CHECKLIST_ITEMS = [
 ];
 
 const QUICK_MENU = [
-  { icon: "🧮", label: "잔금대출 계산", to: "/loan" },
-  { icon: "🏦", label: "협약은행 확인", to: "/loan/banks" },
+  { icon: "🧮", label: "잔금대출 계산", to: "/loan/calc/step1" },
+  { icon: "🏦", label: "협약은행 확인", to: "/loan" },
   { icon: "📋", label: "납부 현황", to: "/payment" },
   { icon: "📢", label: "공지사항", to: "/notices" },
 ];
