@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Bell, Check, Phone } from "lucide-react";
+import { checkDdayAlerts, getUnreadCount } from "@/lib/notifications";
+import NotificationCenter from "@/components/NotificationCenter";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
@@ -93,6 +95,14 @@ const dDay = (dateStr: string) => {
 
 const Home = () => {
   const navigate = useNavigate();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(getUnreadCount);
+
+  // Run D-day check on mount
+  useEffect(() => {
+    checkDdayAlerts();
+    setUnreadCount(getUnreadCount());
+  }, []);
 
   const [bannerVisible, setBannerVisible] = useState(
     () => localStorage.getItem("home_banner_dismissed") !== "true"
@@ -140,11 +150,13 @@ const Home = () => {
         <span className="text-lg font-bold text-primary">
           입주<span className="text-accent">ON</span>
         </span>
-        <button onClick={() => navigate("/notices")} className="relative p-1">
+        <button onClick={() => setShowNotifications(true)} className="relative p-1">
           <Bell className="h-6 w-6 text-foreground" />
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-            2
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 
@@ -324,6 +336,10 @@ const Home = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {showNotifications && (
+        <NotificationCenter onClose={() => { setShowNotifications(false); setUnreadCount(getUnreadCount()); }} />
+      )}
 
       <BottomTabBar />
     </div>
