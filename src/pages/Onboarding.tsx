@@ -28,7 +28,7 @@ const Onboarding = () => {
   const goNext = () => {
     if (current < slides.length - 1) setCurrent(current + 1);
     else {
-      localStorage.setItem("onboarding_done", "true");
+      localStorage.setItem("ipjuon_onboarded", "true");
       navigate("/login", { replace: true });
     }
   };
@@ -49,7 +49,7 @@ const Onboarding = () => {
       {/* Skip */}
       {current < slides.length - 1 && (
         <button
-          onClick={() => { localStorage.setItem("onboarding_done", "true"); navigate("/login", { replace: true }); }}
+          onClick={() => { localStorage.setItem("ipjuon_onboarded", "true"); navigate("/login", { replace: true }); }}
           className="absolute top-6 right-6 text-sm text-muted-foreground z-10"
         >
           건너뛰기

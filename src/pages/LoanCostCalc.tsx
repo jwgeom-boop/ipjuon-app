@@ -38,7 +38,7 @@ const LoanCostCalc = () => {
 
   const contract = useMemo(() => {
     try {
-      const raw = localStorage.getItem("contractInfo");
+      const raw = localStorage.getItem("ipjuon_contract");
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;

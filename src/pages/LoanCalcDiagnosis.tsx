@@ -72,7 +72,7 @@ const LoanCalcDiagnosis = () => {
 
   // Load contract
   const contract = useMemo(() => {
-    try { return JSON.parse(localStorage.getItem("contractInfo") || "null"); } catch { return null; }
+    try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
   }, []);
 
   // Step 1
