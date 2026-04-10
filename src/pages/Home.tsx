@@ -1,6 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, Bell, Check, Phone } from "lucide-react";
+import { checkDdayAlerts, getUnreadCount } from "@/lib/notifications";
+import NotificationCenter from "@/components/NotificationCenter";
 import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
