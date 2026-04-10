@@ -158,7 +158,7 @@ const LoanCalcDiagnosis = () => {
   const step1Valid = price > 0 && location !== null && regulated !== null;
   const step2Valid = firstTime !== null && housingCount !== null;
   const step3Valid = incomeType !== null && income > 0 && tenure !== null;
-  const step4Valid = hasExistingLoan !== null && creditGrade !== null;
+  const step4Valid = hasExistingLoan !== null && financialSector !== null && creditGrade !== null;
   const step5Valid = inputRate > 0;
 
   const canNext = [false, step1Valid, step2Valid, step3Valid, step4Valid, step5Valid][step];
