@@ -337,6 +337,10 @@ const Home = () => {
         </DialogContent>
       </Dialog>
 
+      {showNotifications && (
+        <NotificationCenter onClose={() => { setShowNotifications(false); setUnreadCount(getUnreadCount()); }} />
+      )}
+
       <BottomTabBar />
     </div>
   );
