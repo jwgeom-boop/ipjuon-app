@@ -123,22 +123,18 @@ const LoanMain = () => {
 
         <div className="border-t border-border" />
 
-        {/* Calculator Section */}
-        <div className="rounded-[14px] bg-muted/50 px-4 py-4">
-          <p className="text-sm font-semibold text-foreground">💡 상담 전에 내 대출 한도를 먼저 알고 싶다면?</p>
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            <button onClick={() => navigate("/loan/calc/step1")} className="rounded-xl bg-card border border-border p-3 text-left hover:shadow-sm transition-shadow">
-              <p className="text-2xl">🏦</p>
-              <p className="text-sm font-bold text-foreground mt-2">잔금대출 자가진단</p>
-              <p className="text-[11px] text-muted-foreground mt-1">LTV·DSR 기준 예상 한도</p>
-              <div className="mt-2 flex items-center gap-0.5 text-xs text-primary font-medium">시작 <ChevronRight className="w-3.5 h-3.5" /></div>
-            </button>
-            <button onClick={() => navigate("/loan/cost-calc")} className="rounded-xl bg-card border border-border p-3 text-left hover:shadow-sm transition-shadow">
-              <p className="text-2xl">💰</p>
-              <p className="text-sm font-bold text-foreground mt-2">입주비용 계산기</p>
-              <p className="text-[11px] text-muted-foreground mt-1">취득세·등기·이사비</p>
-              <div className="mt-2 flex items-center gap-0.5 text-xs text-primary font-medium">시작 <ChevronRight className="w-3.5 h-3.5" /></div>
-            </button>
+        {/* Section 3: Calculator */}
+        <div>
+          <h2 className="text-base font-bold text-foreground">잔금대출 한도 미리 계산해보기</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">대략적인 한도를 확인할 수 있어요</p>
+
+          <div className="mt-3 rounded-[14px] border border-border bg-card p-4">
+            <p className="text-2xl">🧮</p>
+            <p className="text-sm font-bold text-foreground mt-2">잔금대출 자가진단</p>
+            <p className="text-[11px] text-muted-foreground mt-1">LTV·DSR 기준으로 예상 한도를 확인해보세요</p>
+            <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={() => navigate("/loan/calc/step1")}>
+              계산 시작하기
+            </Button>
           </div>
         </div>
       </div>
