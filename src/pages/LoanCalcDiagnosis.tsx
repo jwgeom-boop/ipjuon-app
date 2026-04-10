@@ -566,7 +566,7 @@ const LoanCalcDiagnosis = () => {
                 ]} />
 
                 <DetailCard title="💰 DSR·소득 심사" headerColor="bg-green-600" items={[
-                  ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권"} (DSR ${Math.round(dsrPct * 100)}%)`],
+                  ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권 — 상호금융"} (DSR ${Math.round(dsrPct * 100)}%)`],
                   ["소득유형", `${INCOME_TYPES.find(t => t.key === incomeType)?.label} (인정률 ${Math.round(incomeRate * 100)}%)`],
                   ["연소득", toEok(income)],
                   ["인정소득", toEok(recognizedIncome)],
