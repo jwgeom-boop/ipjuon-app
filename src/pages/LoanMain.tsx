@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import BottomTabBar from "@/components/BottomTabBar";
 import { ALL_BANKS, getBanksForComplex, type BankInfo } from "@/data/bankData";
+import LoanCalculator from "@/components/LoanCalculator";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ const LoanMain = () => {
   const [show1All, setShow1All] = useState(false);
   const [show2All, setShow2All] = useState(false);
   const [phoneModal, setPhoneModal] = useState<BankInfo | null>(null);
+  const [showCalc, setShowCalc] = useState(false);
 
   const contract = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
@@ -132,7 +134,7 @@ const LoanMain = () => {
             <p className="text-2xl">🧮</p>
             <p className="text-sm font-bold text-foreground mt-2">잔금대출 자가진단</p>
             <p className="text-[11px] text-muted-foreground mt-1">LTV·DSR 기준으로 예상 한도를 확인해보세요</p>
-            <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={() => navigate("/loan/calc/step1")}>
+            <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={() => setShowCalc(true)}>
               계산 시작하기
             </Button>
           </div>
