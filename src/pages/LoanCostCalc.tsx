@@ -45,16 +45,6 @@ const LoanCostCalc = () => {
     }
   }, []);
 
-  const loanResult = useMemo(() => {
-    try {
-      const raw = sessionStorage.getItem("loanCalcStep3");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  // Calculate paid total and actual balance from contractInfo
   const { paidTotal, actualBalance } = useMemo(() => {
     if (!contract) return { paidTotal: 0, actualBalance: 0 };
     let paid = 0;
@@ -72,12 +62,10 @@ const LoanCostCalc = () => {
   const [priceRaw, setPriceRaw] = useState(contract ? fmtNum(String(contract.price)) : "");
   const price = parseNum(priceRaw);
 
-  // 취득세 inputs
   const [housingCount, setHousingCount] = useState<HousingCount>(1);
   const [regulated, setRegulated] = useState(false);
   const [firstTimeTax, setFirstTimeTax] = useState(false);
 
-  // 선택 항목
   const [movingChecked, setMovingChecked] = useState(false);
   const [movingSize, setMovingSize] = useState<AreaSize>("medium");
   const [movingCustom, setMovingCustom] = useState("");
@@ -92,7 +80,6 @@ const LoanCostCalc = () => {
 
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // ── 취득세 계산 (분양가 기준 유지) ──
   const taxRate = price > 0 ? calcAcquisitionTaxRate(price, housingCount, regulated) : 0;
   const acquisitionTax = Math.round(price * taxRate / 100);
   const localEducationTax = Math.round(acquisitionTax * 0.1);
@@ -100,14 +87,12 @@ const LoanCostCalc = () => {
   const firstTimeDeduction = firstTimeTax ? Math.min(200, acquisitionTax + localEducationTax + ruralTax) : 0;
   const taxTotal = Math.max(0, acquisitionTax + localEducationTax + ruralTax - firstTimeDeduction);
 
-  // ── 등기비용 (분양가 기준) ──
   const bondPurchase = Math.round(price * 0.013 * 0.15);
   const lawyerFee = price <= 30000 ? 40 : price <= 50000 ? 55 : price <= 80000 ? 70 : 85;
   const stampTax = 15;
   const registrationFee = 1.5;
   const registrationTotal = bondPurchase + lawyerFee + stampTax + registrationFee;
 
-  // ── 선택 항목 ──
   const movingCost = movingChecked
     ? (movingMode === "custom" ? parseNum(movingCustom) : AREA_COSTS[movingSize].cost)
     : 0;
@@ -118,11 +103,7 @@ const LoanCostCalc = () => {
 
   const applianceCost = applianceChecked ? parseNum(applianceRaw) : 0;
 
-  // ── 총합 (잔금 기준) ──
   const additionalCosts = taxTotal + registrationTotal + movingCost + interiorCost + applianceCost;
-  const prepareTotal = actualBalance + additionalCosts;
-  const loanAmount = loanResult?.loanPrincipal || 0;
-  const selfFund = Math.max(0, prepareTotal - loanAmount);
 
   return (
     <div className="app-shell min-h-screen bg-background">
@@ -130,7 +111,10 @@ const LoanCostCalc = () => {
         <button onClick={() => navigate(-1)} className="p-1">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <h1 className="text-base font-bold text-foreground">입주비용 계산기</h1>
+        <div>
+          <h1 className="text-base font-bold text-foreground">입주 부대비용 계산기</h1>
+          <p className="text-[11px] text-muted-foreground">취득세·등기비 외 입주 시 필요한 비용을 계산하세요</p>
+        </div>
       </header>
 
       <div className="px-4 py-5 pb-10 space-y-5">
@@ -161,7 +145,7 @@ const LoanCostCalc = () => {
           </div>
         )}
 
-        {/* ── 섹션 1: 취득세 ── */}
+        {/* 취득세 */}
         <div className="app-card space-y-4">
           <h3 className="font-bold text-foreground">취득세 계산</h3>
 
@@ -256,7 +240,7 @@ const LoanCostCalc = () => {
           )}
         </div>
 
-        {/* ── 섹션 2: 등기비용 ── */}
+        {/* 등기비용 */}
         <div className="app-card space-y-3">
           <h3 className="font-bold text-foreground">등기비용</h3>
           {price > 0 && (
@@ -286,11 +270,10 @@ const LoanCostCalc = () => {
           )}
         </div>
 
-        {/* ── 섹션 3: 선택 항목 ── */}
+        {/* 선택 항목 */}
         <div className="app-card space-y-4">
           <h3 className="font-bold text-foreground">선택 항목</h3>
 
-          {/* 이사 비용 */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Checkbox checked={movingChecked} onCheckedChange={(v) => setMovingChecked(!!v)} />
@@ -329,7 +312,6 @@ const LoanCostCalc = () => {
             )}
           </div>
 
-          {/* 인테리어 */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Checkbox checked={interiorChecked} onCheckedChange={(v) => setInteriorChecked(!!v)} />
@@ -362,7 +344,6 @@ const LoanCostCalc = () => {
             )}
           </div>
 
-          {/* 가전·가구 */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Checkbox checked={applianceChecked} onCheckedChange={(v) => setApplianceChecked(!!v)} />
@@ -382,7 +363,7 @@ const LoanCostCalc = () => {
           </div>
         </div>
 
-        {/* ── 납부 내역 접기/펼치기 ── */}
+        {/* 납부 내역 */}
         {contract && price > 0 && (
           <div className="app-card">
             <button
@@ -412,64 +393,41 @@ const LoanCostCalc = () => {
           </div>
         )}
 
-        {/* ── 총 자금 계획 요약 (잔금 기준) ── */}
+        {/* 부대비용 합계 카드 */}
         {price > 0 && (
           <div className="space-y-0">
-            <p className="text-sm font-bold text-foreground mb-2">지금 준비해야 할 자금</p>
+            <p className="text-sm font-bold text-foreground mb-2">입주 부대비용 합계</p>
             <div
               className="rounded-[18px] px-5 py-5 text-primary-foreground space-y-2"
               style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}
             >
               <div className="flex justify-between text-sm">
-                <span className="opacity-80">잔금</span>
-                <span className="font-semibold">{toEok(actualBalance)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="opacity-80">취득세·등기비 (분양가 기준)</span>
-                <span>+{(taxTotal + registrationTotal).toLocaleString()}만원</span>
+                <span className="opacity-80">취득세·등기비</span>
+                <span className="font-semibold">{(taxTotal + registrationTotal).toLocaleString()}만원</span>
               </div>
               {movingCost > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="opacity-80">이사비</span>
-                  <span>+{movingCost.toLocaleString()}만원</span>
+                  <span className="opacity-80">이사비 (선택)</span>
+                  <span>{movingCost.toLocaleString()}만원</span>
                 </div>
               )}
               {interiorCost > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="opacity-80">인테리어</span>
-                  <span>+{interiorCost.toLocaleString()}만원</span>
+                  <span className="opacity-80">인테리어 (선택)</span>
+                  <span>{interiorCost.toLocaleString()}만원</span>
                 </div>
               )}
               {applianceCost > 0 && (
                 <div className="flex justify-between text-sm">
-                  <span className="opacity-80">가전·가구</span>
-                  <span>+{applianceCost.toLocaleString()}만원</span>
+                  <span className="opacity-80">가전·가구 (선택)</span>
+                  <span>{applianceCost.toLocaleString()}만원</span>
                 </div>
               )}
               <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
-                <span>준비 필요 총액</span>
-                <span>{toEok(prepareTotal)}</span>
+                <span>부대비용 합계</span>
+                <span>{additionalCosts.toLocaleString()}만원</span>
               </div>
-              {loanAmount > 0 ? (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="opacity-80">대출 가능액</span>
-                    <span>-{toEok(loanAmount)}</span>
-                  </div>
-                  <div className="border-t border-white/20 pt-2 flex justify-between text-sm font-bold">
-                    <span>순 자기자금</span>
-                    <span className="text-green-300">{toEok(selfFund)}</span>
-                  </div>
-                  <p className="text-[11px] opacity-60">대출 후 본인 부담액</p>
-                </>
-              ) : (
-                <button
-                  onClick={() => navigate("/loan/calc/step1")}
-                  className="text-[12px] text-white/80 underline underline-offset-2 mt-1"
-                >
-                  대출 계산기에서 확인 →
-                </button>
-              )}
+              <p className="text-[11px] opacity-60">* 대출 외 본인이 준비해야 할 비용</p>
             </div>
           </div>
         )}
@@ -485,12 +443,21 @@ const LoanCostCalc = () => {
         </div>
 
         {/* 하단 버튼 */}
-        <Button
-          className="w-full h-12 text-base font-semibold"
-          onClick={() => navigate("/loan")}
-        >
-          잔금대출 계산하러 가기 →
-        </Button>
+        <div className="space-y-2">
+          <Button
+            className="w-full h-12 text-base font-semibold"
+            onClick={() => navigate("/loan/calc/step1")}
+          >
+            잔금대출 한도 계산하기
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full h-12 text-base font-semibold"
+            onClick={() => navigate("/loan")}
+          >
+            협약은행 확인하기
+          </Button>
+        </div>
       </div>
     </div>
   );
