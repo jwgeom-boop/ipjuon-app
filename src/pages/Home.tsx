@@ -74,117 +74,147 @@ export default function Home() {
     gap: 10,
     cursor: "pointer",
     transition: "transform 0.15s",
-    height: 180,
-    padding: "16px 8px",
+    height: 160,
+    padding: "14px 8px",
   };
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh", background: "#f5f7fa", overflow: "hidden" }}>
-      {/* 배경 그라데이션 */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 320, background: "linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%)", zIndex: 0 }} />
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 320, background: "rgba(0,0,0,0.1)", zIndex: 1 }} />
+    <div style={{
+      minHeight: "100dvh",
+      background: "#f0f0f0",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "flex-start",
+    }}>
+      <div style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: 430,
+        height: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}>
+        {/* 배경 이미지 */}
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 0,
+          backgroundImage: "url('https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&q=80')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }} />
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          background: "rgba(0,0,0,0.22)",
+        }} />
 
-      {/* 헤더 바 */}
-      <div style={{ position: "relative", zIndex: 2, padding: "20px 20px 0" }}>
-        <div style={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>
-          {dong}동 {ho}호
-        </div>
-        <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 4 }}>
-          📅 {moveInDate} 입주예정 ({dday})
-        </div>
-      </div>
-
-      {/* 상단 배경 여백 */}
-      <div style={{ height: 60 }} />
-
-      {/* 카드 그리드 — 지그재그 배치 */}
-      <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "0 16px" }}>
-        {/* 협약은행 — 위 */}
-        <div onClick={() => navigate("/loan/banks")} style={{ ...cardStyle, marginTop: 0 }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#FF6B7A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🏦</div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>협약은행</div>
-            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>단지별 참여 은행 확인</div>
+        {/* 헤더 바 */}
+        <div style={{ position: "relative", zIndex: 2, padding: "20px 20px 0" }}>
+          <div style={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>
+            {dong}동 {ho}호
+          </div>
+          <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 4 }}>
+            📅 {moveInDate} 입주예정 ({dday})
           </div>
         </div>
 
-        {/* 잔금대출 셀프계산기 — 아래로 내림 */}
-        <div onClick={() => navigate("/loan/calc/diagnosis")} style={{ ...cardStyle, marginTop: 40 }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#4A90D9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🔍</div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>잔금대출</div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>셀프계산기</div>
-            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>대출 한도 자가 진단</div>
-          </div>
-        </div>
+        {/* 상단 여백 (15%) */}
+        <div style={{ height: "15%" }} />
 
-        {/* 제휴업체 — 위 */}
-        <div onClick={() => navigate("/my/partners")} style={{ ...cardStyle, marginTop: -20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#4CAF82", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🤝</div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>제휴업체</div>
-            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>인테리어·이사·가전</div>
-          </div>
-        </div>
-
-        {/* 공지사항 — 중간 */}
-        <div onClick={() => navigate("/notices")} style={{ ...cardStyle, marginTop: 20 }}>
-          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F5A623", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📢</div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>공지사항</div>
-            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>최신 소식 확인</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 하단 여백 */}
-      <div style={{ height: 120 }} />
-
-      {/* 하단 탭바 */}
-      <BottomTabBar />
-
-      {/* 입주 가이드 패널 */}
-      {showGuide && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowGuide(false)} />
-          <div style={{ position: "relative", background: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "24px 20px 40px", maxHeight: "75vh", overflow: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: "#ddd" }} />
+        {/* 카드 그리드 — 지그재그 배치 */}
+        <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 12px" }}>
+          {/* 협약은행 — 위 */}
+          <div onClick={() => navigate("/loan/banks")} style={{ ...cardStyle, marginTop: 0 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FF6B7A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏦</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a1a" }}>협약은행</div>
+              <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>단지별 참여 은행 확인</div>
             </div>
-            <div style={{ marginBottom: 16 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800 }}>🚀 입주 준비 가이드</h2>
+          </div>
+
+          {/* 잔금대출 셀프계산기 — 아래로 내림 */}
+          <div onClick={() => navigate("/loan/calc/diagnosis")} style={{ ...cardStyle, marginTop: 40 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#4A90D9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🔍</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a1a" }}>잔금대출</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a1a" }}>셀프계산기</div>
+              <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>대출 한도 자가 진단</div>
             </div>
-            <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 20, paddingBottom: 4 }}>
-              {GUIDE_TABS.map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                  flexShrink: 0, fontSize: 12, fontWeight: 700,
-                  padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
-                  background: activeTab === tab ? "#2563EB" : "#f0f0f0",
-                  color: activeTab === tab ? "#fff" : "#666",
-                }}>
-                  {tab}
-                </button>
-              ))}
+          </div>
+
+          {/* 제휴업체 — 위 */}
+          <div onClick={() => navigate("/my/partners")} style={{ ...cardStyle, marginTop: -20 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#4CAF82", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤝</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a1a" }}>제휴업체</div>
+              <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>인테리어·이사·가전</div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {GUIDE_DATA[activeTab].map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#f8fafc", borderRadius: 16 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
-                    {item.icon}
+          </div>
+
+          {/* 공지사항 — 중간 */}
+          <div onClick={() => navigate("/notices")} style={{ ...cardStyle, marginTop: 20 }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#F5A623", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📢</div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a1a" }}>공지사항</div>
+              <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>최신 소식 확인</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 하단 flex spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* 하단 탭바 */}
+        <div style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+          <BottomTabBar />
+        </div>
+
+        {/* 입주 가이드 패널 */}
+        {showGuide && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowGuide(false)} />
+            <div style={{ position: "relative", background: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "24px 20px 40px", maxHeight: "75vh", overflow: "auto" }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#ddd" }} />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 800 }}>🚀 입주 준비 가이드</h2>
+              </div>
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 20, paddingBottom: 4 }}>
+                {GUIDE_TABS.map((tab) => (
+                  <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                    flexShrink: 0, fontSize: 12, fontWeight: 700,
+                    padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
+                    background: activeTab === tab ? "#2563EB" : "#f0f0f0",
+                    color: activeTab === tab ? "#fff" : "#666",
+                  }}>
+                    {tab}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {GUIDE_DATA[activeTab].map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#f8fafc", borderRadius: 16 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+                      {item.icon}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700 }}>{item.title}</div>
+                      <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{item.desc}</div>
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#ccc" }}>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{item.title}</div>
-                    <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{item.desc}</div>
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: "#ccc" }}>
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
