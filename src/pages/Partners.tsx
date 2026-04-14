@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import BottomTabBar from "@/components/BottomTabBar";
 
 const CATEGORIES = [
@@ -54,9 +58,47 @@ const VENDORS: Record<string, { name: string; desc: string; phone: string; benef
   ],
 };
 
+const TIME_OPTIONS = ["오전", "오후", "저녁"];
+
 const Partners = () => {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showConsultModal, setShowConsultModal] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState("");
+  const [selectedVendorType, setSelectedVendorType] = useState("");
+  const [consultName, setConsultName] = useState("");
+  const [consultPhone, setConsultPhone] = useState(() => {
+    try { return localStorage.getItem("user_phone") || ""; } catch { return ""; }
+  });
+  const [consultTime, setConsultTime] = useState<string | null>(null);
+
+  const handleConsultSubmit = async () => {
+    if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
+
+    const contract = JSON.parse(localStorage.getItem("ipjuon_contract") || "{}");
+
+    const { error } = await supabase
+      .from("consultation_requests")
+      .insert({
+        resident_name: consultName,
+        resident_phone: consultPhone,
+        preferred_time: consultTime,
+        vendor_name: selectedVendor,
+        vendor_type: selectedVendorType,
+        complex_name: contract?.complex || "",
+        status: "대기중",
+      });
+
+    if (error) {
+      toast.error("신청 중 오류가 발생했습니다. 다시 시도해주세요.");
+      return;
+    }
+
+    setShowConsultModal(false);
+    setConsultName("");
+    setConsultTime(null);
+    toast.success("상담 신청이 완료되었습니다.\n1~2 영업일 내에 연락 드리겠습니다.");
+  };
 
   return (
     <div className="app-shell min-h-screen bg-background pb-24">
@@ -79,11 +121,21 @@ const Partners = () => {
                 <div className="mt-2 bg-primary/10 rounded-lg px-3 py-1.5">
                   <p className="text-xs text-primary font-semibold">🎁 {vendor.benefit}</p>
                 </div>
+                <button
+                  onClick={() => {
+                    setSelectedVendor(vendor.name);
+                    setSelectedVendorType(selectedCategory);
+                    setShowConsultModal(true);
+                  }}
+                  className="w-full bg-primary text-primary-foreground text-sm font-bold py-2.5 rounded-xl mt-3"
+                >
+                  상담 신청하기
+                </button>
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                   <span className="text-xs text-muted-foreground">📞 {vendor.phone}</span>
                   <a
                     href={`tel:${vendor.phone.replace(/-/g, "")}`}
-                    className="bg-primary text-primary-foreground text-xs font-bold px-4 py-2 rounded-lg"
+                    className="bg-muted text-foreground text-xs font-bold px-4 py-2 rounded-lg"
                   >
                     전화하기
                   </a>
@@ -115,6 +167,47 @@ const Partners = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {showConsultModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowConsultModal(false)} />
+          <div className="relative w-full max-w-[430px] bg-card rounded-t-2xl px-5 pt-5 pb-8 animate-in slide-in-from-bottom duration-300">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-foreground">{selectedVendor} 상담 신청</h3>
+              <button onClick={() => setShowConsultModal(false)} className="p-1">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">이름</label>
+                <Input value={consultName} onChange={e => setConsultName(e.target.value)} placeholder="이름을 입력해주세요" className="h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">휴대폰</label>
+                <Input value={consultPhone} onChange={e => setConsultPhone(e.target.value)} placeholder="010-0000-0000" className="h-11" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">상담 희망 시간</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {TIME_OPTIONS.map(t => (
+                    <button key={t} onClick={() => setConsultTime(t)}
+                      className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                        consultTime === t ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground"
+                      }`}
+                    >{t}</button>
+                  ))}
+                </div>
+              </div>
+              <Button className="w-full h-12 text-base font-semibold mt-2"
+                disabled={!consultName.trim() || !consultPhone.trim() || !consultTime}
+                onClick={handleConsultSubmit}>
+                상담 신청하기
+              </Button>
+            </div>
           </div>
         </div>
       )}
