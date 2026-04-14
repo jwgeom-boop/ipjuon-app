@@ -19,6 +19,7 @@ export type Database = {
           complex_name: string
           created_at: string
           id: string
+          memo: string | null
           preferred_time: string
           resident_name: string
           resident_phone: string
@@ -30,6 +31,7 @@ export type Database = {
           complex_name?: string
           created_at?: string
           id?: string
+          memo?: string | null
           preferred_time: string
           resident_name: string
           resident_phone: string
@@ -41,6 +43,7 @@ export type Database = {
           complex_name?: string
           created_at?: string
           id?: string
+          memo?: string | null
           preferred_time?: string
           resident_name?: string
           resident_phone?: string
