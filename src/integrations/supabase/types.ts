@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      consultation_requests: {
+        Row: {
+          complex_name: string
+          created_at: string
+          id: string
+          preferred_time: string
+          resident_name: string
+          resident_phone: string
+          status: string
+          vendor_name: string
+          vendor_type: string
+        }
+        Insert: {
+          complex_name?: string
+          created_at?: string
+          id?: string
+          preferred_time: string
+          resident_name: string
+          resident_phone: string
+          status?: string
+          vendor_name: string
+          vendor_type: string
+        }
+        Update: {
+          complex_name?: string
+          created_at?: string
+          id?: string
+          preferred_time?: string
+          resident_name?: string
+          resident_phone?: string
+          status?: string
+          vendor_name?: string
+          vendor_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
