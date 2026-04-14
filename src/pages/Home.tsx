@@ -111,6 +111,26 @@ export default function Home() {
           background: "rgba(0,0,0,0.22)",
         }} />
 
+        {/* 상태바 */}
+        <div style={{
+          position: "relative",
+          zIndex: 10,
+          flexShrink: 0,
+          height: 44,
+          background: "rgba(0,0,0,0.55)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 20px",
+        }}>
+          <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>9:41</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "white", fontSize: 13 }}>
+            <span>●●●</span>
+            <span>WiFi</span>
+            <span>🔋</span>
+          </div>
+        </div>
+
         {/* 헤더 바 */}
         <div style={{ position: "relative", zIndex: 2, padding: "20px 20px 0" }}>
           <div style={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>
