@@ -108,7 +108,7 @@ export default function Home() {
           position: "absolute",
           inset: 0,
           zIndex: 1,
-          background: "rgba(0,0,0,0.22)",
+          background: "rgba(0,0,0,0.08)",
         }} />
 
         {/* 통합 헤더 바 */}
@@ -117,7 +117,7 @@ export default function Home() {
           zIndex: 10,
           flexShrink: 0,
           height: 48,
-          background: "rgba(0,0,0,0.60)",
+          background: "rgba(0,0,0,0.35)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
           display: "flex",
