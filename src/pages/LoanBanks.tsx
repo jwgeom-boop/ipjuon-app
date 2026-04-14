@@ -11,7 +11,8 @@ const TIME_OPTIONS = ["오전", "오후", "저녁"];
 const LoanBanks = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [modalBank, setModalBank] = useState<string | null>(null);
+  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
+  const [showModal, setShowModal] = useState(false);
   const [consultName, setConsultName] = useState("");
   const [consultPhone, setConsultPhone] = useState(() => {
     try { return localStorage.getItem("user_phone") || ""; } catch { return ""; }
@@ -32,18 +33,20 @@ const LoanBanks = () => {
     }
   }, [location.hash]);
 
-  const handleSubmit = () => {
-    if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
-    setModalBank(null);
-    setConsultName("");
-    setConsultTime(null);
-    toast.success("신청이 접수되었습니다.\n1~2 영업일 내 담당자가 연락드립니다.");
+  const toggleBank = (name: string) => {
+    setSelectedBanks(prev =>
+      prev.includes(name) ? prev.filter(b => b !== name) : [...prev, name]
+    );
   };
 
-  const openModal = (bankName: string) => {
-    setModalBank(bankName);
+  const handleSubmit = () => {
+    if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
+    const banks = selectedBanks.join(", ");
+    setShowModal(false);
+    setSelectedBanks([]);
     setConsultName("");
     setConsultTime(null);
+    toast.success(`${banks} 상담 신청이 완료되었습니다.\n1~2 영업일 내에 연락 드리겠습니다.`);
   };
 
   return (
@@ -55,7 +58,7 @@ const LoanBanks = () => {
         <h1 className="text-base font-bold text-foreground">협약 금융기관 전체</h1>
       </header>
 
-      <div className="px-4 py-5 space-y-5">
+      <div className="px-4 py-5 space-y-5 pb-32">
         <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
           <p className="text-[13px] text-foreground font-medium">🏠 {complexName} 참여 금융기관</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
@@ -66,7 +69,12 @@ const LoanBanks = () => {
             <p className="text-sm font-bold text-foreground mb-3">🏦 1금융권 (DSR 40%)</p>
             <div className="space-y-3">
               {banks1.map(bank => (
-                <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
+                <BankCard
+                  key={bank.name}
+                  bank={bank}
+                  selected={selectedBanks.includes(bank.name)}
+                  onToggle={() => toggleBank(bank.name)}
+                />
               ))}
             </div>
           </div>
@@ -79,20 +87,43 @@ const LoanBanks = () => {
             <p className="text-sm font-bold text-foreground mb-3">🏢 상호금융 (DSR 50%)</p>
             <div className="space-y-3">
               {banks2.map(bank => (
-                <BankCard key={bank.name} bank={bank} onConsult={() => openModal(bank.name)} />
+                <BankCard
+                  key={bank.name}
+                  bank={bank}
+                  selected={selectedBanks.includes(bank.name)}
+                  onToggle={() => toggleBank(bank.name)}
+                />
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {modalBank && (
+      {selectedBanks.length > 0 && (
+        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4 z-40">
+          <button
+            onClick={() => setShowModal(true)}
+            className="w-full h-14 bg-primary text-white rounded-2xl font-bold text-base shadow-lg"
+          >
+            선택한 {selectedBanks.length}개 은행 상담 신청하기
+          </button>
+        </div>
+      )}
+
+      {showModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setModalBank(null)} />
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowModal(false)} />
           <div className="relative w-full max-w-[430px] bg-card rounded-t-2xl px-5 pt-5 pb-8 animate-in slide-in-from-bottom duration-300">
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-foreground">{modalBank} 상담 신청</h3>
-              <button onClick={() => setModalBank(null)} className="p-1"><X className="w-5 h-5 text-muted-foreground" /></button>
+              <h3 className="text-base font-bold text-foreground">선택 은행 상담 신청</h3>
+              <button onClick={() => setShowModal(false)} className="p-1"><X className="w-5 h-5 text-muted-foreground" /></button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {selectedBanks.map(name => (
+                <span key={name} className="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
+                  {name}
+                </span>
+              ))}
             </div>
             <div className="space-y-4">
               <div className="space-y-1.5">
@@ -124,17 +155,29 @@ const LoanBanks = () => {
   );
 };
 
-function BankCard({ bank, onConsult }: { bank: BankInfo; onConsult: () => void }) {
+function BankCard({ bank, selected, onToggle }: { bank: BankInfo; selected: boolean; onToggle: () => void }) {
   return (
-    <div className="rounded-[14px] border border-border bg-card p-4">
-      <p className="text-base font-bold text-foreground">{bank.icon} {bank.name}</p>
-      
+    <div
+      onClick={onToggle}
+      className={`rounded-[14px] border-2 bg-card p-4 cursor-pointer transition-colors ${
+        selected ? "border-primary bg-primary/5" : "border-border"
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-base font-bold text-foreground">{bank.icon} {bank.name}</p>
+        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+          selected ? "bg-primary border-primary" : "border-gray-300"
+        }`}>
+          {selected && <span className="text-white text-xs font-bold">✓</span>}
+        </div>
+      </div>
       <div className="flex flex-wrap gap-1.5 mt-2">
         {bank.tags.map(tag => (
-          <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent-foreground font-medium border border-accent/20">{tag}</span>
+          <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent-foreground font-medium border border-accent/20">
+            {tag}
+          </span>
         ))}
       </div>
-      <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={onConsult}>📞 상담 신청하기</Button>
     </div>
   );
 }
