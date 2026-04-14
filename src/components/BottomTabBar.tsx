@@ -13,7 +13,17 @@ const BottomTabBar = () => {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-card border-t border-border">
+    <nav style={{
+      position: "fixed",
+      bottom: 0,
+      left: "50%",
+      transform: "translateX(-50%)",
+      width: "100%",
+      maxWidth: 430,
+      background: "#1E3A5F",
+      zIndex: 50,
+      paddingBottom: "env(safe-area-inset-bottom, 8px)",
+    }}>
       <div className="flex">
         {tabs.map((tab) => {
           const active = location.pathname === tab.path || location.pathname.startsWith(tab.path + "/");
@@ -22,11 +32,32 @@ const BottomTabBar = () => {
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className={`flex-1 flex flex-col items-center py-2.5 text-xs transition-colors ${
-                active ? "text-primary font-semibold" : "text-tab-inactive"
-              }`}
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                paddingTop: 10,
+                paddingBottom: 6,
+                fontSize: 11,
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: active ? "white" : "rgba(255,255,255,0.45)",
+                fontWeight: active ? 700 : 400,
+              }}
             >
-              <Icon className="w-5 h-5 mb-0.5" />
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 12,
+                padding: "4px 14px",
+                marginBottom: 2,
+                background: active ? "rgba(255,255,255,0.15)" : "transparent",
+              }}>
+                <Icon style={{ width: 20, height: 20, opacity: active ? 1 : 0.45 }} />
+              </div>
               {tab.label}
             </button>
           );
