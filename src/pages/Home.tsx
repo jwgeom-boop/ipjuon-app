@@ -111,34 +111,26 @@ export default function Home() {
           background: "rgba(0,0,0,0.22)",
         }} />
 
-        {/* 상태바 */}
+        {/* 통합 헤더 바 */}
         <div style={{
           position: "relative",
           zIndex: 10,
           flexShrink: 0,
-          height: 44,
-          background: "rgba(0,0,0,0.55)",
+          height: 48,
+          background: "rgba(0,0,0,0.60)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 20px",
+          padding: "0 16px",
         }}>
-          <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>9:41</span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "white", fontSize: 13 }}>
-            <span>●●●</span>
-            <span>WiFi</span>
-            <span>🔋</span>
-          </div>
-        </div>
-
-        {/* 헤더 바 */}
-        <div style={{ position: "relative", zIndex: 2, padding: "20px 20px 0" }}>
-          <div style={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>
+          <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>
             {dong}동 {ho}호
-          </div>
-          <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 4 }}>
+          </span>
+          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>
             📅 {moveInDate} 입주예정 ({dday})
-          </div>
+          </span>
         </div>
 
         {/* 상단 여백 (15%) */}
