@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,86 +10,22 @@ const formatPhone = (value: string) => {
   return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 };
 
-const maskPhone = (phone: string) => {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length < 11) return phone;
-  return `${digits.slice(0, 3)}-****-${digits.slice(7)}`;
-};
-
 const Login = () => {
   const navigate = useNavigate();
   const [phone, setPhone] = useState("");
-  const [showOtp, setShowOtp] = useState(false);
-  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
-  const [timer, setTimer] = useState(180);
-  const [timerActive, setTimerActive] = useState(false);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const digits = phone.replace(/\D/g, "");
   const phoneValid = digits.length === 11;
-  const otpFilled = otp.every((d) => d !== "");
 
-  useEffect(() => {
-    if (!timerActive) return;
-    if (timer <= 0) {
-      setTimerActive(false);
-      return;
-    }
-    const id = setInterval(() => setTimer((t) => t - 1), 1000);
-    return () => clearInterval(id);
-  }, [timerActive, timer]);
-
-  const handleSendOtp = () => {
-    setShowOtp(true);
-    setTimer(180);
-    setTimerActive(true);
-    setOtp(Array(6).fill(""));
-    setTimeout(() => otpRefs.current[0]?.focus(), 100);
-  };
-
-  const handleResend = () => {
-    setTimer(180);
-    setTimerActive(true);
-    setOtp(Array(6).fill(""));
-    otpRefs.current[0]?.focus();
-  };
-
-  const handleOtpChange = useCallback(
-    (index: number, value: string) => {
-      if (!/^\d?$/.test(value)) return;
-      const next = [...otp];
-      next[index] = value;
-      setOtp(next);
-      if (value && index < 5) {
-        otpRefs.current[index + 1]?.focus();
-      }
-    },
-    [otp]
-  );
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleVerify = () => {
-    // MVP: 000000이면 무조건 통과
-    const code = otp.join("");
-    if (code !== "000000") return;
-
+  const handleLogin = () => {
     localStorage.setItem("auth_token", "demo_token");
     localStorage.setItem("user_phone", phone);
     const done = localStorage.getItem("ipjuon_onboarded");
     navigate(done ? "/home" : "/onboarding", { replace: true });
   };
 
-  const mm = String(Math.floor(timer / 60)).padStart(2, "0");
-  const ss = String(timer % 60).padStart(2, "0");
-
   return (
     <div className="app-shell flex flex-col min-h-screen bg-background px-6 pt-16">
-      {/* Logo */}
       <div className="text-center mb-10">
         <h1 className="text-xl font-bold text-primary">입주ON</h1>
       </div>
@@ -99,7 +35,6 @@ const Login = () => {
         별도 회원가입 없이 바로 이용하세요
       </p>
 
-      {/* Phone */}
       <Input
         type="tel"
         placeholder="010-0000-0000"
@@ -112,63 +47,14 @@ const Login = () => {
         className="w-full h-12 text-base font-semibold"
         disabled={!phoneValid}
         style={{ opacity: phoneValid ? 1 : 0.4 }}
-        onClick={handleSendOtp}
+        onClick={handleLogin}
       >
-        인증번호 받기
+        로그인
       </Button>
 
       <p className="text-xs text-muted-foreground text-center mt-3">
         전화번호는 로그인에만 사용되며 저장되지 않습니다
       </p>
-
-      {/* OTP section */}
-      {showOtp && (
-        <div className="mt-8 animate-slide-down">
-          <p className="text-sm font-medium text-foreground mb-1">
-            인증번호를 입력해주세요
-          </p>
-          <p className="text-xs text-muted-foreground mb-4">
-            {maskPhone(phone)}로 인증번호를 보냈습니다
-          </p>
-
-          <div className="flex gap-2 mb-3 justify-center">
-            {otp.map((d, i) => (
-              <input
-                key={i}
-                ref={(el) => { otpRefs.current[i] = el; }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={d}
-                onChange={(e) => handleOtpChange(i, e.target.value)}
-                onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                className="w-11 h-13 text-center text-xl font-semibold border border-input rounded-lg bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            ))}
-          </div>
-
-          <p className={`text-sm font-medium mb-4 text-center ${timer < 60 ? "text-destructive" : "text-muted-foreground"}`}>
-            {mm}:{ss}
-          </p>
-
-          <Button
-            className="w-full h-12 text-base font-semibold mb-3"
-            disabled={!otpFilled}
-            style={{ opacity: otpFilled ? 1 : 0.4 }}
-            onClick={handleVerify}
-          >
-            확인
-          </Button>
-
-          <button
-            onClick={handleResend}
-            disabled={timer > 0}
-            className={`w-full text-center text-sm ${timer > 0 ? "text-muted-foreground/50 cursor-not-allowed" : "text-accent underline cursor-pointer"}`}
-          >
-            인증번호 재발송
-          </button>
-        </div>
-      )}
     </div>
   );
 };
