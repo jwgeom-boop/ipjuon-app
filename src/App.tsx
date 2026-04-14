@@ -17,6 +17,7 @@ import MyPage from "./pages/MyPage";
 import Partners from "./pages/Partners";
 import Notices from "./pages/Notices";
 import NotFound from "./pages/NotFound";
+import ConsultationDashboard from "./pages/ConsultationDashboard";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/my" element={<MyPage />} />
           <Route path="/my/partners" element={<Partners />} />
           <Route path="/notices" element={<Notices />} />
+          <Route path="/admin/consultations" element={<ConsultationDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
