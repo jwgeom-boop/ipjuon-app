@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import BottomTabBar from "@/components/BottomTabBar";
 import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
 import LoanCalculator from "@/components/LoanCalculator";
@@ -54,14 +55,35 @@ const LoanMain = () => {
     );
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
-    const banks = selectedBanks.join(", ");
+
+    const contractData = JSON.parse(localStorage.getItem("ipjuon_contract") || "{}");
+
+    const insertData = selectedBanks.map((vendorName) => ({
+      resident_name: consultName,
+      resident_phone: consultPhone,
+      preferred_time: consultTime,
+      vendor_name: vendorName,
+      vendor_type: "bank",
+      complex_name: contractData?.complex || "",
+      status: "대기중",
+    }));
+
+    const { error } = await supabase
+      .from("consultation_requests")
+      .insert(insertData);
+
+    if (error) {
+      toast.error("신청 중 오류가 발생했습니다. 다시 시도해주세요.");
+      return;
+    }
+
     setShowModal(false);
     setSelectedBanks([]);
     setConsultName("");
     setConsultTime(null);
-    toast.success(`${banks} 상담 신청 완료!\n1~2 영업일 내에 연락 드리겠습니다.`);
+    toast.success("상담 신청 완료!\n1~2 영업일 내에 연락 드리겠습니다.");
   };
 
   return (
