@@ -17,6 +17,7 @@ import MyPage from "./pages/MyPage";
 import Partners from "./pages/Partners";
 import Notices from "./pages/Notices";
 import NotFound from "./pages/NotFound";
+import ConsultationDashboard from "./pages/ConsultationDashboard";
 
 const queryClient = new QueryClient();
 
