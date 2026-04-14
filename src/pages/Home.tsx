@@ -1,509 +1,190 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Bell, Phone, ChevronDown, ChevronUp } from "lucide-react";
-import { checkDdayAlerts, getUnreadCount } from "@/lib/notifications";
-import { STORAGE_KEYS } from "@/lib/storageKeys";
-import NotificationCenter from "@/components/NotificationCenter";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import BottomTabBar from "@/components/BottomTabBar";
 
-const CONTRACT_KEY = STORAGE_KEYS.contract;
-const BANNER_KEY = STORAGE_KEYS.bannerClosed;
-
-const QUICK_MENU = [
-  { icon: "🧮", label: "잔금대출 계산", to: "/loan/calc/step1" },
-  { icon: "🏦", label: "협약은행 확인", to: "/loan" },
-  { icon: "📋", label: "납부 현황", to: "/payment" },
-  { icon: "📢", label: "공지사항", to: "/notices" },
-];
-
-const TIPS = [
-  {
-    id: 1,
-    icon: "📊",
-    title: "LTV란 무엇인가요?",
-    summary: "담보인정비율 — 집값 대비 대출 가능 금액",
-    content: `LTV(Loan To Value)는 집값 대비 대출 가능한 최대 비율입니다.
-
-예시) 분양가 3억원, LTV 70% → 최대 2억 1천만원 대출 가능
-
-주택 보유 수와 지역에 따라 다르게 적용됩니다.
-
-· 생애최초 1주택: 최대 80%
-· 일반 1주택: 최대 70%
-· 2주택 (비조정지역): 최대 60%
-· 2주택 (조정대상지역): 최대 30%
-
-※ 실제 한도는 감정가 확정 후 결정됩니다.`,
-  },
-  {
-    id: 2,
-    icon: "💰",
-    title: "DSR이 대출 한도에 미치는 영향",
-    summary: "연소득 대비 전체 대출 상환액 비율",
-    content: `DSR(Debt Service Ratio)은 연소득 대비 1년간 갚아야 할 모든 대출의 원리금 비율입니다.
-
-· 1금융권: 연소득의 40% 이내
-· 2금융권(상호금융): 연소득의 50% 이내
-
-예시) 연소득 5,000만원, 1금융권
-→ 연간 최대 상환액 2,000만원 (월 167만원)
-→ 기존 월 상환액 50만원이면
-→ 잔금대출 월 상환 가능액 117만원 이내
-
-기존 대출(신용대출, 자동차 할부 등)이 많을수록 한도가 줄어듭니다.`,
-  },
-  {
-    id: 3,
-    icon: "📋",
-    title: "잔금대출 필요 서류",
-    summary: "미리 준비하면 승인이 빨라져요",
-    content: `잔금대출 신청 시 일반적으로 필요한 서류입니다.
-
-공통 서류:
-· 신분증 (주민등록증 또는 운전면허증)
-· 주민등록등본 (3개월 이내 발급)
-· 인감증명서 + 인감도장
-· 분양계약서 사본
-
-소득 증빙 서류 (유형별):
-· 직장인: 근로소득 원천징수영수증, 재직증명서
-· 자영업자: 사업자등록증, 종합소득세 신고서
-· 프리랜서: 소득확인증명서
-
-※ 은행마다 요구 서류가 다를 수 있으니 사전 확인 필수`,
-  },
-  {
-    id: 4,
-    icon: "🏠",
-    title: "생애최초 주택 구입자 혜택",
-    summary: "처음 집을 사신다면 꼭 확인하세요",
-    content: `생애최초 주택 구입자는 다양한 우대 혜택을 받을 수 있습니다.
-
-대출 한도 우대:
-· LTV 최대 80% 적용 (일반 1주택 70% 대비 10% 높음)
-· 일부 협약은행 추가 우대 적용
-
-정책 대출 활용:
-· 디딤돌 대출: 연 2~3%대 저금리, 최대 2.5억
-· 보금자리론: 장기 고정금리, 최대 3.6억
-
-취득세 감면:
-· 1주택 생애최초: 200만원 한도 취득세 감면
-
-※ 본인 또는 배우자가 과거에 주택을 소유한 적 없어야 합니다.`,
-  },
-  {
-    id: 5,
-    icon: "📈",
-    title: "고정금리 vs 변동금리 선택법",
-    summary: "내 상황에 맞는 금리 유형은?",
-    content: `잔금대출 금리는 크게 고정금리와 변동금리로 나뉩니다.
-
-고정금리:
-· 대출 기간 동안 금리 변동 없음
-· 금리 상승기에 유리
-· 초기 금리가 변동금리보다 다소 높음
-· 장기 계획이 명확한 경우 추천
-
-변동금리:
-· 시장 금리에 따라 6개월마다 변동
-· 금리 하락기에 유리
-· 초기 금리가 낮아 부담 적음
-· 금리 상승 시 월 상환액 증가 위험
-
-혼합형:
-· 초기 3~5년 고정 후 변동 전환
-· 가장 일반적으로 선택하는 유형
-
-※ 현재 금리 환경과 본인의 상환 계획을 고려해 선택하세요.`,
-  },
-  {
-    id: 6,
-    icon: "⚠️",
-    title: "중도상환수수료 꼭 확인하세요",
-    summary: "조기 상환 시 추가 비용이 발생할 수 있어요",
-    content: `대출 만기 전에 미리 갚으면 중도상환수수료가 발생할 수 있습니다.
-
-일반적인 중도상환수수료:
-· 통상 대출 잔액의 0.5~1.5%
-· 대출 후 3년 이내 상환 시 주로 부과
-· 은행마다 기준이 다름
-
-절약 방법:
-· 일부 은행은 연간 원금의 10~20%까지 수수료 없이 상환 가능
-· 수수료 면제 조건 협약은행에 사전 확인
-· 3년 후 상환 계획이라면 수수료 면제 시점 계산
-
-예시) 잔금대출 1억, 수수료 1% → 중도상환 시 100만원 추가 발생
-
-※ 대출 계약 전 중도상환수수료 조건을 반드시 확인하세요.`,
-  },
-];
-
-const NOTICES = [
-  {
-    id: "1",
-    category: "대출정보" as const,
-    title: "KB국민은행 생애최초 우대조건 안내",
-    date: "2026.04.08",
-    content: "KB국민은행에서 생애최초 주택 구입자를 위한 우대조건을 안내드립니다.\n\n· 우대 대상: 생애최초 주택 구입자\n· 우대 내용: LTV 최대 80% 적용\n· 문의: ☎ 1588-9999\n\n자세한 사항은 가까운 지점에 문의해 주세요.",
-  },
-  {
-    id: "2",
-    category: "서비스안내" as const,
-    title: "입주ON 앱 정식 출시 안내",
-    date: "2026.04.05",
-    content: "입주ON 앱이 정식 출시되었습니다.\n\n잔금대출 한도 계산, 협약은행 확인, 납부 일정 관리를 한 곳에서 편리하게 이용해 보세요.\n\n서비스 이용 중 불편사항은 마이페이지 > 고객문의로 접수해 주세요.",
-  },
-];
-
-const PARTNERS = [
-  {
-    id: "1",
-    category: "인테리어" as const,
-    name: "홈닥터 인테리어",
-    benefit: "입주ON 특별 할인",
-    description: "입주ON 앱 고객 특별 할인\n시공 견적 무료 상담\n평일 09:00~18:00",
-    phone: "02-1234-5678",
-  },
-  {
-    id: "2",
-    category: "이사" as const,
-    name: "스마트 이사",
-    benefit: "포장이사 10% 할인",
-    description: "포장이사 전문\n입주ON 고객 10% 할인\n24시간 상담 가능",
-    phone: "02-9876-5432",
-  },
-  {
-    id: "3",
-    category: "청소" as const,
-    name: "클린하우스",
-    benefit: "입주 청소 특별가",
-    description: "입주 전문 청소 서비스\n친환경 세제 사용\n평일·주말 모두 가능",
-    phone: "02-3333-7777",
-  },
-];
-
-const NOTICE_BADGE: Record<string, { bg: string; text: string }> = {
-  "대출정보": { bg: "#DBEAFE", text: "#1D4ED8" },
-  "서비스안내": { bg: "#D1FAE5", text: "#065F46" },
-  "제휴소식": { bg: "#FEF3C7", text: "#92400E" },
+const GUIDE_TABS = ["잔금·등기", "입주당일", "행정처리", "공과금"];
+const GUIDE_DATA: Record<string, Array<{ icon: string; title: string; desc: string }>> = {
+  "잔금·등기": [
+    { icon: "🏦", title: "잔금대출 실행", desc: "은행 방문 후 대출을 실행하세요." },
+    { icon: "💰", title: "잔금 납부", desc: "대출금 + 자기자금으로 시행사에 납부하세요." },
+    { icon: "📝", title: "취득세 납부", desc: "잔금일로부터 60일 이내 필수 납부." },
+    { icon: "🏛️", title: "소유권 이전 등기", desc: "취득세 영수증 지참 후 법무사 선임." },
+    { icon: "📄", title: "등기부등본 확인", desc: "등기 완료 후 소유권을 최종 확인하세요." },
+  ],
+  "입주당일": [
+    { icon: "🔑", title: "열쇠 수령", desc: "관리사무소 방문 시 입주증을 지참하세요." },
+    { icon: "🔍", title: "하자 점검", desc: "각 공간을 꼼꼼히 점검하고 즉시 접수하세요." },
+    { icon: "📸", title: "상태 촬영", desc: "하자 부위는 사진으로 촬영해 보관하세요." },
+    { icon: "🚗", title: "주차 등록", desc: "관리사무소에 차량번호를 등록하세요." },
+    { icon: "📦", title: "이사 예약 확인", desc: "엘리베이터 사용 시간을 확인하세요." },
+  ],
+  "행정처리": [
+    { icon: "🏠", title: "전입신고 (14일 이내)", desc: "주민센터 또는 정부24에서 신고하세요." },
+    { icon: "📋", title: "확정일자", desc: "전입신고 시 동시에 받으세요." },
+    { icon: "💡", title: "관리비 등록", desc: "입주 즉시 관리사무소에 방문하세요." },
+    { icon: "📮", title: "주소 변경", desc: "은행·보험·카드사 주소를 변경하세요." },
+  ],
+  "공과금": [
+    { icon: "💡", title: "전기 신규 가입", desc: "한국전력공사에 신규 가입하세요." },
+    { icon: "🔥", title: "가스 개통", desc: "도시가스 고객센터에 개통 신청하세요." },
+    { icon: "💧", title: "수도 확인", desc: "관리사무소에서 확인하세요." },
+    { icon: "📺", title: "인터넷/TV 개통", desc: "원하는 통신사에 개통 신청하세요." },
+  ],
 };
 
-const PARTNER_BADGE: Record<string, { bg: string; text: string }> = {
-  "인테리어": { bg: "#EDE9FE", text: "#5B21B6" },
-  "이사": { bg: "#DBEAFE", text: "#1E40AF" },
-  "청소": { bg: "#D1FAE5", text: "#065F46" },
-};
-
-const toEok = (won: number) => {
-  const manwon = Math.floor(won / 10000);
-  const eok = Math.floor(manwon / 10000);
-  const rest = manwon % 10000;
-  if (eok > 0 && rest > 0) return `${eok}억 ${rest.toLocaleString()}만원`;
-  if (eok > 0) return `${eok}억원`;
-  return `${manwon.toLocaleString()}만원`;
-};
-
-const dDay = (dateStr: string) => {
-  const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
-  if (diff > 0) return `D-${diff}`;
-  if (diff === 0) return "D-Day";
-  return `D+${Math.abs(diff)}`;
-};
-
-const dDayDiff = (dateStr: string) =>
-  Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
-
-const dDayColor = (dateStr: string) => {
-  const diff = dDayDiff(dateStr);
-  if (diff < 0) return "text-gray-400";
-  if (diff <= 7) return "text-red-600 font-bold";
-  if (diff <= 30) return "text-red-500";
-  if (diff <= 60) return "text-orange-500";
-  return "text-blue-600";
-};
-
-const dDayLabel = (dateStr: string) => {
-  const diff = dDayDiff(dateStr);
-  if (diff < 0) return "입주 완료";
-  return dDay(dateStr);
-};
-
-const Home = () => {
+export default function Home() {
   const navigate = useNavigate();
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(getUnreadCount);
-  const [openTipId, setOpenTipId] = useState<number | null>(null);
-  const [isTipSectionOpen, setIsTipSectionOpen] = useState(false);
+  const [dong, setDong] = useState("---");
+  const [ho, setHo] = useState("---");
+  const [moveInDate, setMoveInDate] = useState("입주일 미정");
+  const [dday, setDday] = useState("D-?");
+  const [showGuide, setShowGuide] = useState(false);
+  const [activeTab, setActiveTab] = useState("잔금·등기");
 
   useEffect(() => {
-    checkDdayAlerts();
-    setUnreadCount(getUnreadCount());
-  }, []);
-
-  const [bannerVisible, setBannerVisible] = useState(
-    () => localStorage.getItem(BANNER_KEY) !== "true"
-  );
-
-  const contract = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem(CONTRACT_KEY) || "null");
-    } catch {
-      return null;
-    }
+      const stored = localStorage.getItem("ipjuon_contract");
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.dong) setDong(data.dong);
+        if (data.ho) setHo(data.ho);
+        if (data.moveInDate) {
+          const date = new Date(data.moveInDate);
+          const diff = Math.ceil((date.getTime() - Date.now()) / 86400000);
+          setDday(diff > 0 ? `D-${diff}` : diff === 0 ? "D-Day" : `D+${Math.abs(diff)}`);
+          setMoveInDate(
+            date.toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" })
+          );
+        }
+      }
+    } catch { /* ignore */ }
   }, []);
 
-  const [selectedNotice, setSelectedNotice] = useState<(typeof NOTICES)[0] | null>(null);
-  const [selectedPartner, setSelectedPartner] = useState<(typeof PARTNERS)[0] | null>(null);
-
-  const dismissBanner = () => {
-    setBannerVisible(false);
-    localStorage.setItem(BANNER_KEY, "true");
+  const cardStyle = {
+    background: "rgba(255,255,255,0.72)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+    borderRadius: 20,
+    border: "1px solid rgba(255,255,255,0.55)",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.13)",
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    cursor: "pointer",
+    transition: "transform 0.15s",
+    height: 180,
+    padding: "16px 8px",
   };
 
-  const showBanner = !contract && bannerVisible;
-
   return (
-    <div className="app-shell min-h-screen bg-background pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-card border-b border-border px-5 py-3 flex items-center justify-between">
-        <span className="text-lg font-bold" style={{ color: "#1E3A5F" }}>
-          입주ON
-        </span>
-        <button onClick={() => setShowNotifications(true)} className="relative p-1">
-          <Bell className="h-6 w-6 text-foreground" />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-      </header>
+    <div style={{ position: "relative", minHeight: "100vh", background: "#f5f7fa", overflow: "hidden" }}>
+      {/* 배경 그라데이션 */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 320, background: "linear-gradient(135deg, #1E3A5F 0%, #2563EB 100%)", zIndex: 0 }} />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 320, background: "rgba(0,0,0,0.1)", zIndex: 1 }} />
 
-      <div className="px-4 py-5 space-y-6">
-        {/* Section 1: Contract banner OR info card */}
-        {showBanner && (
-          <button
-            onClick={() => navigate("/my")}
-            className="w-full rounded-xl px-4 py-3.5 bg-accent/10 text-left flex items-center justify-between gap-2"
-          >
-            <span className="text-sm text-foreground">
-              아파트 정보를 등록하면 더 정확한 계산이 가능해요 →
-            </span>
-            <span
-              role="button"
-              onClick={(e) => { e.stopPropagation(); dismissBanner(); }}
-              className="flex-shrink-0 p-1 rounded-full hover:bg-accent/20 transition-colors"
-            >
-              <X className="w-4 h-4 text-muted-foreground" />
-            </span>
-          </button>
-        )}
-
-        {contract && (
-          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-base font-bold text-foreground">
-                  {contract.complex} {contract.dong}동 {contract.ho}호
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  분양가 {toEok(contract.salePrice)} · 잔금 {toEok(contract.balance)}
-                </p>
-              </div>
-              {contract.moveInDate && (
-                <span className={`text-sm ${dDayColor(contract.moveInDate)}`}>
-                  {dDayLabel(contract.moveInDate)}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Section 2: Quick Menu */}
-        <div className="grid grid-cols-2 gap-3">
-          {QUICK_MENU.map((m) => (
-            <button
-              key={m.label}
-              onClick={() => navigate(m.to)}
-              className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card py-5 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <span className="text-3xl">{m.icon}</span>
-              <span className="text-sm font-semibold text-foreground">{m.label}</span>
-            </button>
-          ))}
+      {/* 헤더 바 */}
+      <div style={{ position: "relative", zIndex: 2, padding: "20px 20px 0" }}>
+        <div style={{ color: "#fff", fontSize: 20, fontWeight: 800 }}>
+          {dong}동 {ho}호
         </div>
-
-        {/* Section 3: 잔금대출 꿀팁 */}
-        <div>
-          {/* 섹션 헤더 — 항상 표시 */}
-          <button
-            onClick={() => setIsTipSectionOpen(!isTipSectionOpen)}
-            className="w-full flex items-center justify-between mb-3"
-          >
-            <div>
-              <h2 className="text-sm font-bold text-foreground text-left">잔금대출 꿀팁</h2>
-              <p className="text-xs text-muted-foreground mt-0.5 text-left">
-                클릭하면 자세한 내용을 확인할 수 있어요
-              </p>
-            </div>
-            {isTipSectionOpen
-              ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
-              : <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            }
-          </button>
-
-          {/* 팁 목록 — 섹션 열렸을 때만 표시 */}
-          {isTipSectionOpen && (
-            <div className="space-y-2">
-              {TIPS.map((tip) => {
-                const isOpen = openTipId === tip.id;
-                return (
-                  <div key={tip.id} className="rounded-xl border border-gray-100 bg-card shadow-sm overflow-hidden">
-                    <button
-                      onClick={() => setOpenTipId(isOpen ? null : tip.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isOpen ? "bg-[#EFF6FF]" : ""}`}
-                    >
-                      <span className="text-2xl flex-shrink-0">{tip.icon}</span>
-                      <span className={`flex-1 text-sm font-semibold ${isOpen ? "text-[#1E3A5F]" : "text-foreground"}`}>
-                        {tip.title}
-                      </span>
-                      {isOpen
-                        ? <ChevronUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                      }
-                    </button>
-
-                    {isOpen && (
-                      <div className="px-4 pt-3 pb-4 border-t border-gray-100 bg-slate-50">
-                        <p className="text-xs text-gray-500 mb-2">{tip.summary}</p>
-                        <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{tip.content}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        <div style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, marginTop: 4 }}>
+          📅 {moveInDate} 입주예정 ({dday})
         </div>
+      </div>
 
-        {/* Section 4: Latest notices */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground">최신 공지</h2>
-            <button onClick={() => navigate("/notices")} className="text-xs text-accent font-medium">
-              전체보기 →
-            </button>
-          </div>
-          <div className="space-y-2">
-            {NOTICES.map((n) => {
-              const badge = NOTICE_BADGE[n.category];
-              return (
-                <button
-                  key={n.id}
-                  onClick={() => setSelectedNotice(n)}
-                  className="w-full rounded-xl border border-border bg-card px-4 py-3 text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="text-xs font-medium px-2 py-0.5 rounded-full"
-                      style={{ backgroundColor: badge?.bg, color: badge?.text }}
-                    >
-                      {n.category}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{n.date}</span>
-                  </div>
-                  <p className="text-sm font-semibold text-foreground mt-2">{n.title}</p>
-                </button>
-              );
-            })}
+      {/* 상단 배경 여백 */}
+      <div style={{ height: 60 }} />
+
+      {/* 카드 그리드 — 지그재그 배치 */}
+      <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, padding: "0 16px" }}>
+        {/* 협약은행 — 위 */}
+        <div onClick={() => navigate("/loan/banks")} style={{ ...cardStyle, marginTop: 0 }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#FF6B7A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🏦</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>협약은행</div>
+            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>단지별 참여 은행 확인</div>
           </div>
         </div>
 
-        {/* Section 5: Partner banners (horizontal scroll) */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground">제휴 업체</h2>
-            <button onClick={() => navigate("/partners")} className="text-xs text-accent font-medium">
-              전체보기 →
-            </button>
+        {/* 잔금대출 셀프계산기 — 아래로 내림 */}
+        <div onClick={() => navigate("/loan/calc/diagnosis")} style={{ ...cardStyle, marginTop: 40 }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#4A90D9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🔍</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>잔금대출</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>셀프계산기</div>
+            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>대출 한도 자가 진단</div>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            {PARTNERS.map((p) => {
-              const badge = PARTNER_BADGE[p.category];
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedPartner(p)}
-                  className="flex-shrink-0 w-52 rounded-xl border border-border bg-card p-4 text-left shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <span
-                    className="text-xs font-medium px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: badge?.bg, color: badge?.text }}
-                  >
-                    {p.category}
-                  </span>
-                  <p className="text-sm font-bold text-foreground mt-2">{p.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{p.benefit}</p>
-                </button>
-              );
-            })}
+        </div>
+
+        {/* 제휴업체 — 위 */}
+        <div onClick={() => navigate("/my/partners")} style={{ ...cardStyle, marginTop: -20 }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#4CAF82", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>🤝</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>제휴업체</div>
+            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>인테리어·이사·가전</div>
+          </div>
+        </div>
+
+        {/* 공지사항 — 중간 */}
+        <div onClick={() => navigate("/notices")} style={{ ...cardStyle, marginTop: 20 }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#F5A623", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>📢</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#1a1a1a" }}>공지사항</div>
+            <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>최신 소식 확인</div>
           </div>
         </div>
       </div>
 
-      {/* Notice detail modal */}
-      <Dialog open={!!selectedNotice} onOpenChange={() => setSelectedNotice(null)}>
-        <DialogContent className="max-w-sm rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-base">{selectedNotice?.title}</DialogTitle>
-            <DialogDescription className="text-xs">{selectedNotice?.date} · {selectedNotice?.category}</DialogDescription>
-          </DialogHeader>
-          <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{selectedNotice?.content}</p>
-        </DialogContent>
-      </Dialog>
+      {/* 하단 여백 */}
+      <div style={{ height: 120 }} />
 
-      {/* Partner detail modal */}
-      <Dialog open={!!selectedPartner} onOpenChange={() => setSelectedPartner(null)}>
-        <DialogContent className="max-w-sm rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-base">{selectedPartner?.name}</DialogTitle>
-            <DialogDescription>
-              {selectedPartner && (
-                <span
-                  className="text-xs font-medium px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: PARTNER_BADGE[selectedPartner.category]?.bg, color: PARTNER_BADGE[selectedPartner.category]?.text }}
-                >
-                  {selectedPartner.category}
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">{selectedPartner?.description}</p>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-            <Phone className="w-4 h-4" />
-            <a href={`tel:${selectedPartner?.phone}`} className="text-accent font-medium">
-              {selectedPartner?.phone}
-            </a>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {showNotifications && (
-        <NotificationCenter onClose={() => { setShowNotifications(false); setUnreadCount(getUnreadCount()); }} />
-      )}
-
+      {/* 하단 탭바 */}
       <BottomTabBar />
+
+      {/* 입주 가이드 패널 */}
+      {showGuide && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowGuide(false)} />
+          <div style={{ position: "relative", background: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: "24px 20px 40px", maxHeight: "75vh", overflow: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: "#ddd" }} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 800 }}>🚀 입주 준비 가이드</h2>
+            </div>
+            <div style={{ display: "flex", gap: 8, overflowX: "auto", marginBottom: 20, paddingBottom: 4 }}>
+              {GUIDE_TABS.map((tab) => (
+                <button key={tab} onClick={() => setActiveTab(tab)} style={{
+                  flexShrink: 0, fontSize: 12, fontWeight: 700,
+                  padding: "6px 14px", borderRadius: 20, border: "none", cursor: "pointer",
+                  background: activeTab === tab ? "#2563EB" : "#f0f0f0",
+                  color: activeTab === tab ? "#fff" : "#666",
+                }}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {GUIDE_DATA[activeTab].map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#f8fafc", borderRadius: 16 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#EFF6FF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>
+                    {item.icon}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{item.title}</div>
+                    <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{item.desc}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#ccc" }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default Home;
+}
