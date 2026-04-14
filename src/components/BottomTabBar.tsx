@@ -1,10 +1,10 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Landmark, Receipt, User } from "lucide-react";
+import { Home, Landmark, Handshake, User } from "lucide-react";
 
 const tabs = [
   { path: "/home", label: "홈", icon: Home },
   { path: "/loan", label: "대출", icon: Landmark },
-  { path: "/payment", label: "납부", icon: Receipt },
+  { path: "/my/partners", label: "제휴업체", icon: Handshake },
   { path: "/my", label: "마이", icon: User },
 ];
 
