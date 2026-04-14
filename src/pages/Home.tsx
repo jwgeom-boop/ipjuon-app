@@ -148,7 +148,7 @@ export default function Home() {
           </div>
 
           {/* 잔금대출 셀프계산기 — 아래로 내림 */}
-          <div onClick={() => navigate("/loan/calc/diagnosis")} style={{ ...cardStyle, marginTop: 40 }}>
+          <div onClick={() => navigate("/loan/calc/step1")} style={{ ...cardStyle, marginTop: 40 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#4A90D9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🔍</div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 14, fontWeight: 800, color: "#1a1a1a" }}>잔금대출</div>
