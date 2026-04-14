@@ -171,13 +171,6 @@ function BankCard({ bank, selected, onToggle }: { bank: BankInfo; selected: bool
           {selected && <span className="text-white text-xs font-bold">✓</span>}
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5 mt-2">
-        {bank.tags.map(tag => (
-          <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent-foreground font-medium border border-accent/20">
-            {tag}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
