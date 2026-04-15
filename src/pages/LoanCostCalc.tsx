@@ -37,15 +37,14 @@ function calcDeduction(
 
   if (firstTime) {
     if (price <= 120000) {
-      deductions.push({ amount: tax, label: "생애최초 100% 면제" });
+      deductions.push({ amount: Math.min(tax, 200), label: "생애최초 감면" });
     }
-    // 12억 초과 시 감면 없음 (일반세율)
   }
 
   if (newlywed) {
-    const limit = regulated ? 40000 : 30000; // 수도권=조정으로 간주
+    const limit = regulated ? 40000 : 30000;
     if (price <= limit) {
-      deductions.push({ amount: Math.round(tax * 0.5), label: "신혼부부 50% 감면" });
+      deductions.push({ amount: Math.min(Math.round(tax * 0.5), 200), label: "신혼부부 감면" });
     }
   }
 
@@ -226,9 +225,15 @@ const LoanCostCalc = () => {
             <h3 className="font-bold text-foreground">비용 합산</h3>
 
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">취득세 ({taxRate.toFixed(1)}%{deduction.amount > 0 ? " 감면적용" : ""})</span>
-              <span className="text-foreground">{acquisitionTax.toLocaleString()}만원</span>
+              <span className="text-muted-foreground">취득세 ({taxRate.toFixed(1)}%)</span>
+              <span className="text-foreground">{rawTax.toLocaleString()}만원</span>
             </div>
+            {deduction.amount > 0 && (
+              <div className="flex justify-between text-sm text-green-700">
+                <span>{deduction.label}</span>
+                <span>-{deduction.amount.toLocaleString()}만원</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">등기비용</span>
               <span className="text-foreground">{registrationFee.toLocaleString()}만원</span>
