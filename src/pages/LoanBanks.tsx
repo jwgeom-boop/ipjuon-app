@@ -52,6 +52,7 @@ const LoanBanks = () => {
       vendor_name: vendorName,
       vendor_type: "bank",
       complex_name: contractData?.complex || "",
+      unit_number: contractData?.unit || "",
       status: "대기중",
     }));
 
