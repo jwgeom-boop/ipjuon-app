@@ -110,8 +110,8 @@ const LoanCalcDiagnosis = () => {
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
   const dsrPct = financialSector === "first" ? 0.4 : financialSector === "second" ? 0.5 : 0.4;
   const inputRate = parseFloat(rateInput) || 0;
-  const rateAdd = creditGrade ? (GRADE_INFO[creditGrade]?.rateAdd || 0) : 0;
-  const effectiveRate = inputRate + rateAdd;
+  const rateAdd = 0;
+  const effectiveRate = inputRate;
   const desired = parseNum(desiredRaw);
 
   const ltvPct = (firstTime !== null && housingCount !== null && regulated !== null)
@@ -132,14 +132,10 @@ const LoanCalcDiagnosis = () => {
   // Rejection
   const rejections: string[] = [];
   if (ltvPct === 0) rejections.push("다주택 조정지역: 현재 조건에서 주택담보대출 불가. 기존 주택 처분 후 재신청하세요.");
-  if (creditGrade && creditGrade >= 9) rejections.push("신용등급 9~10등급: 대부분 금융기관에서 대출 어려움. 신용 회복 후 재신청하세요.");
-  if (hasOverdue) rejections.push("연체 이력: 연체 해소 및 상당 기간 경과 후 가능합니다.");
   if (dsrLimit <= 0 && ltvPct !== 0) rejections.push("DSR 초과: 소득 대비 기존 대출 상환 부담이 높아 추가 대출이 어렵습니다.");
 
   const warnings: string[] = [];
   
-  if (creditGrade && creditGrade >= 5 && creditGrade <= 8) warnings.push(`신용등급 ${creditGrade}등급: 금리 +${rateAdd}%p 가산. 실적용금리 약 ${effectiveRate.toFixed(2)}%`);
-  if (financialSector === "second" && creditGrade && creditGrade >= 7) warnings.push(`신용등급 ${creditGrade}등급은 상호금융에서도 한도 제한 또는 고금리가 적용될 수 있습니다.`);
   if (desired > 0 && desired > appliedLimit) warnings.push("희망금액이 심사 한도를 초과합니다.");
   if (existingMonthly > 0 && recognizedIncome > 0 && (existingMonthly * 12) / recognizedIncome > 0.35) {
     const dsrRatio = Math.round((existingMonthly * 12) / recognizedIncome * 100);
@@ -155,7 +151,7 @@ const LoanCalcDiagnosis = () => {
   const step1Valid = price > 0 && location !== null && regulated !== null;
   const step2Valid = firstTime !== null && housingCount !== null;
   const step3Valid = income > 0;
-  const step4Valid = hasExistingLoan !== null && financialSector !== null && creditGrade !== null;
+  const step4Valid = hasExistingLoan !== null && financialSector !== null;
   const step5Valid = inputRate > 0;
 
   const canNext = [false, step1Valid, step2Valid, step3Valid, step4Valid, step5Valid][step];
@@ -341,8 +337,8 @@ const LoanCalcDiagnosis = () => {
         {step === 4 && (
           <>
             <div>
-              <h2 className="text-base font-bold text-foreground">기존 대출과 신용등급을 입력해주세요</h2>
-              <p className="text-xs text-muted-foreground mt-1">DSR 계산과 판정의 핵심 항목입니다</p>
+              <h2 className="text-base font-bold text-foreground">기존 대출 정보를 입력해주세요</h2>
+              <p className="text-xs text-muted-foreground mt-1">DSR 계산의 핵심 항목입니다</p>
             </div>
 
             <Field label="기존 대출">
@@ -395,38 +391,6 @@ const LoanCalcDiagnosis = () => {
               )}
             </Field>
 
-            <Field label="신용등급 (KCB / 나이스)">
-              <div className="grid grid-cols-5 gap-1.5">
-                {[1, 2, 3, 4, 5].map(g => (
-                  <button key={g} onClick={() => setCreditGrade(g)}
-                    className={`py-2 rounded-lg text-xs font-semibold transition-colors ${creditGrade === g ? "ring-2 ring-primary " : ""}${GRADE_INFO[g].color}`}
-                  >
-                    {g}등급<br /><span className="text-[10px] font-normal">{GRADE_INFO[g].label}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="grid grid-cols-5 gap-1.5 mt-1.5">
-                {[6, 7, 8, 9, 10].map(g => (
-                  <button key={g} onClick={() => setCreditGrade(g)}
-                    className={`py-2 rounded-lg text-xs font-semibold transition-colors ${creditGrade === g ? "ring-2 ring-primary " : ""}${GRADE_INFO[g].color}`}
-                  >
-                    {g}등급<br /><span className="text-[10px] font-normal">{GRADE_INFO[g].label}</span>
-                  </button>
-                ))}
-              </div>
-              {creditGrade && (
-                <div className="rounded-lg bg-muted px-3 py-2 mt-2">
-                  <p className="text-[12px] text-foreground">{GRADE_INFO[creditGrade].hint}</p>
-                </div>
-              )}
-            </Field>
-
-            <Field label="연체 이력">
-              <div className="grid grid-cols-2 gap-2">
-                <ChoiceBtn selected={!hasOverdue} onClick={() => setHasOverdue(false)} title="✅ 연체 없음" sub="" />
-                <ChoiceBtn selected={hasOverdue} onClick={() => setHasOverdue(true)} title="⚠️ 연체 있음" sub="" />
-              </div>
-            </Field>
           </>
         )}
 
@@ -555,11 +519,9 @@ const LoanCalcDiagnosis = () => {
                   ["DSR 최대 한도", toEok(dsrLimit)],
                 ]} />
 
-                <DetailCard title="💳 신용등급 심사" headerColor="bg-accent" items={[
-                  ["신용등급", `${creditGrade}등급 (${GRADE_INFO[creditGrade!]?.label})`],
-                  ["금리 가산", `+${rateAdd}%p`],
-                  ["적용 금리(추정)", `${effectiveRate.toFixed(2)}%`],
-                  ["연체 이력", hasOverdue ? "있음" : "없음"],
+                <DetailCard title="📊 대출 조건" headerColor="bg-accent" items={[
+                  ["적용 금리", `${effectiveRate.toFixed(2)}%`],
+                  ["대출 기간", `${termYears}년`],
                 ]} />
 
                 <DetailCard title="⚠️ 금리 변동 시나리오" headerColor="bg-orange-500" items={
