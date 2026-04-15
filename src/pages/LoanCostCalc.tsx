@@ -42,9 +42,13 @@ function calcDeduction(
   }
 
   if (newlywed) {
+    // 수도권(조정대상지역) 4억 이하 / 비수도권(비조정) 3억 이하
     const limit = regulated ? 40000 : 30000;
     if (price <= limit) {
       deductions.push({ amount: Math.min(Math.round(tax * 0.5), 200), label: "신혼부부 감면" });
+    } else {
+      // 한도 초과 시에도 감면 0으로 표시하여 사용자에게 알림
+      deductions.push({ amount: 0, label: `신혼부부 감면 (${regulated ? "4억" : "3억"} 초과 미적용)` });
     }
   }
 
@@ -170,7 +174,7 @@ const LoanCostCalc = () => {
               <Checkbox checked={newlywed} onCheckedChange={(v) => setNewlywed(!!v)} className="mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-foreground">신혼부부 (혼인 5년 이내)</p>
-                <p className="text-[11px] text-muted-foreground">3억 이하(수도권 4억) 50% 감면</p>
+                <p className="text-[11px] text-muted-foreground">수도권 4억·비수도권 3억 이하 50% 감면 (최대 200만원)</p>
               </div>
             </label>
 
