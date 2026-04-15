@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +8,6 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import BottomTabBar from "@/components/BottomTabBar";
 import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
-import LoanCalculator from "@/components/LoanCalculator";
-import CostCalculator from "@/components/CostCalculator";
 import {
   Select,
   SelectContent,
@@ -20,8 +19,7 @@ import {
 const TIME_OPTIONS = ["오전", "오후", "저녁"];
 
 const LoanMain = () => {
-  const [showCalc, setShowCalc] = useState(false);
-  const [showCostCalc, setShowCostCalc] = useState(false);
+  const navigate = useNavigate();
   const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [consultName, setConsultName] = useState("");
@@ -156,7 +154,7 @@ const LoanMain = () => {
             <p className="text-2xl">🧮</p>
             <p className="text-sm font-bold text-foreground mt-2">잔금대출 자가진단</p>
             <p className="text-[11px] text-muted-foreground mt-1">LTV·DSR 기준으로 예상 한도를 확인해보세요</p>
-            <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={() => setShowCalc(true)}>
+            <Button className="w-full h-10 mt-3 text-sm font-semibold" onClick={() => navigate("/loan/calc/step1")}>
               계산 시작하기
             </Button>
           </div>
@@ -170,7 +168,7 @@ const LoanMain = () => {
           <p className="text-sm font-bold text-foreground mt-2">입주비용 계산기</p>
           <p className="text-[11px] text-muted-foreground mt-1">총 입주비용과 남은 납부금을 한눈에 확인하세요</p>
           <button
-            onClick={() => setShowCostCalc(true)}
+            onClick={() => navigate("/loan/cost-calc")}
             className="mt-3 flex items-center gap-0.5 text-sm text-primary font-semibold"
           >
             계산하기 <ChevronRight className="w-4 h-4" />
@@ -235,13 +233,6 @@ const LoanMain = () => {
         </div>
       )}
 
-      {showCalc && <LoanCalculator onClose={() => setShowCalc(false)} />}
-      {showCostCalc && (
-        <CostCalculator
-          onClose={() => setShowCostCalc(false)}
-          onGoToLoanCalc={() => { setShowCostCalc(false); setShowCalc(true); }}
-        />
-      )}
 
       <BottomTabBar />
     </div>
