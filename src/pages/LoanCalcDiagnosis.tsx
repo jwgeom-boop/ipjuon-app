@@ -39,11 +39,12 @@ const GRADE_INFO: Record<number, { label: string; color: string; hint: string; r
   10: { label: "불가", color: "bg-destructive/10 text-destructive", hint: "🚫 대출 불가", rateAdd: 1.5 },
 };
 
-const INCOME_TYPES = [
-  { key: "salary", icon: "💼", label: "직장인", rate: 1.0, hint: "근로소득 100% 인정 · 원천징수영수증 기준" },
-  { key: "business", icon: "🏪", label: "자영업자", rate: 0.8, hint: "사업소득 80% 인정 · 소득금액증명원 기준" },
-  { key: "freelancer", icon: "💻", label: "프리랜서", rate: 0.6, hint: "기타소득 60% 인정 · 계약서+통장 기준" },
-  { key: "other", icon: "📋", label: "기타", rate: 0.7, hint: "연금·임대소득 70% 인정 · 증빙 서류 필요" },
+const QUICK_INCOMES = [
+  { label: "3,000만", value: 3000 },
+  { label: "5,000만", value: 5000 },
+  { label: "7,000만", value: 7000 },
+  { label: "1억", value: 10000 },
+  { label: "1억5천", value: 15000 },
 ];
 
 const QUICK_RATES = [3.0, 3.3, 3.5, 3.8, 4.2, 5.0];
@@ -86,9 +87,7 @@ const LoanCalcDiagnosis = () => {
   const [housingCount, setHousingCount] = useState<number | null>(null);
 
   // Step 3
-  const [incomeType, setIncomeType] = useState<string | null>(null);
   const [incomeRaw, setIncomeRaw] = useState("");
-  const [tenure, setTenure] = useState<"over6" | "under6" | null>(null);
 
   // Step 4
   const [hasExistingLoan, setHasExistingLoan] = useState<boolean | null>(null);
@@ -107,9 +106,7 @@ const LoanCalcDiagnosis = () => {
   const appraisal = parseNum(appraisalRaw);
   const basePrice = appraisal > 0 ? appraisal : price;
   const income = parseNum(incomeRaw);
-  const incomeRate = INCOME_TYPES.find(t => t.key === incomeType)?.rate || 1;
-  let recognizedIncome = Math.round(income * incomeRate);
-  if (tenure === "under6") recognizedIncome = Math.round(recognizedIncome * 0.9);
+  const recognizedIncome = income;
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
   const dsrPct = financialSector === "first" ? 0.4 : financialSector === "second" ? 0.5 : 0.4;
   const inputRate = parseFloat(rateInput) || 0;
@@ -140,7 +137,7 @@ const LoanCalcDiagnosis = () => {
   if (dsrLimit <= 0 && ltvPct !== 0) rejections.push("DSR 초과: 소득 대비 기존 대출 상환 부담이 높아 추가 대출이 어렵습니다.");
 
   const warnings: string[] = [];
-  if (tenure === "under6") warnings.push("재직 6개월 미만: 소득 10% 차감 적용. 6개월 이후 재신청 시 한도 증가.");
+  
   if (creditGrade && creditGrade >= 5 && creditGrade <= 8) warnings.push(`신용등급 ${creditGrade}등급: 금리 +${rateAdd}%p 가산. 실적용금리 약 ${effectiveRate.toFixed(2)}%`);
   if (financialSector === "second" && creditGrade && creditGrade >= 7) warnings.push(`신용등급 ${creditGrade}등급은 상호금융에서도 한도 제한 또는 고금리가 적용될 수 있습니다.`);
   if (desired > 0 && desired > appliedLimit) warnings.push("희망금액이 심사 한도를 초과합니다.");
@@ -157,7 +154,7 @@ const LoanCalcDiagnosis = () => {
   // Step validation
   const step1Valid = price > 0 && location !== null && regulated !== null;
   const step2Valid = firstTime !== null && housingCount !== null;
-  const step3Valid = incomeType !== null && income > 0 && tenure !== null;
+  const step3Valid = income > 0;
   const step4Valid = hasExistingLoan !== null && financialSector !== null && creditGrade !== null;
   const step5Valid = inputRate > 0;
 
@@ -312,44 +309,30 @@ const LoanCalcDiagnosis = () => {
         {step === 3 && (
           <>
             <div>
-              <h2 className="text-base font-bold text-foreground">소득 정보를 입력해주세요</h2>
-              <p className="text-xs text-muted-foreground mt-1">소득 유형별로 인정 소득이 다르게 적용됩니다</p>
+              <h2 className="text-base font-bold text-foreground">소득과 기존 대출을 입력해주세요</h2>
             </div>
 
-            <Field label="소득 유형">
-              <div className="grid grid-cols-2 gap-2">
-                {INCOME_TYPES.map(t => (
+            <Field label="연소득">
+              <Input value={incomeRaw} onChange={e => setIncomeRaw(fmtNum(e.target.value))} placeholder="예: 5,000 (만원 단위)" className="h-11" inputMode="numeric" />
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {QUICK_INCOMES.map(q => (
                   <button
-                    key={t.key}
-                    onClick={() => setIncomeType(t.key)}
-                    className={`p-3 rounded-lg border text-left transition-colors ${incomeType === t.key ? "bg-primary/10 border-primary" : "bg-card border-border"}`}
+                    key={q.value}
+                    onClick={() => setIncomeRaw(fmtNum(String(q.value)))}
+                    className="text-[12px] px-3 py-1.5 rounded-full border border-border bg-card text-foreground hover:bg-primary/5 transition-colors"
                   >
-                    <p className="text-sm font-semibold text-foreground">{t.icon} {t.label}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">인정률 {Math.round(t.rate * 100)}%</p>
+                    {q.label}
                   </button>
                 ))}
               </div>
-              {incomeType && (
-                <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 mt-2">
-                  <p className="text-[12px] text-foreground">{INCOME_TYPES.find(t => t.key === incomeType)?.hint}</p>
-                </div>
-              )}
-            </Field>
-
-            <Field label="연소득 (만원, 세전)">
-              <Input value={incomeRaw} onChange={e => setIncomeRaw(fmtNum(e.target.value))} placeholder="만원 단위 입력" className="h-11" inputMode="numeric" />
-              {income > 0 && incomeType && (
-                <p className="text-xs text-accent mt-1 font-medium">
-                  인정소득 {toEok(recognizedIncome)} · DSR{Math.round(dsrPct * 100)}% 월한도 {Math.round(recognizedIncome * dsrPct / 12).toLocaleString()}만
+              {income > 0 && (
+                <p className="text-xs text-primary font-medium mt-1">
+                  입력 연소득: {toEok(income)}
                 </p>
               )}
-            </Field>
-
-            <Field label="재직/사업 기간">
-              <div className="grid grid-cols-2 gap-2">
-                <ChoiceBtn selected={tenure === "over6"} onClick={() => setTenure("over6")} title="6개월 이상" sub="정상 심사" />
-                <ChoiceBtn selected={tenure === "under6"} onClick={() => setTenure("under6")} title="6개월 미만" sub="소득 10% 차감" />
-              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                ※ 실제 대출 가능금액은 금융기관별, 소득유형별로 상이할 수 있습니다
+              </p>
             </Field>
           </>
         )}
@@ -567,9 +550,7 @@ const LoanCalcDiagnosis = () => {
 
                 <DetailCard title="💰 DSR·소득 심사" headerColor="bg-green-600" items={[
                   ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권 — 상호금융"} (DSR ${Math.round(dsrPct * 100)}%)`],
-                  ["소득유형", `${INCOME_TYPES.find(t => t.key === incomeType)?.label} (인정률 ${Math.round(incomeRate * 100)}%)`],
                   ["연소득", toEok(income)],
-                  ["인정소득", toEok(recognizedIncome)],
                   ["기존대출 상환액", `${existingMonthly.toLocaleString()}만원/월`],
                   ["DSR 최대 한도", toEok(dsrLimit)],
                 ]} />
