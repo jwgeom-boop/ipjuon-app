@@ -15,19 +15,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const TIME_OPTIONS = ["오전", "오후", "저녁"];
 
 const LoanMain = () => {
   const navigate = useNavigate();
-  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
   const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [consultName, setConsultName] = useState("");
