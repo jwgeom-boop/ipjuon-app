@@ -362,33 +362,23 @@ const LoanCalcDiagnosis = () => {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setFinancialSector("first")}
-                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "first" ? "bg-primary/10 border-primary" : "bg-card border-border"}`}
+                  className={`p-4 rounded-lg border text-left transition-colors ${financialSector === "first" ? "bg-primary/10 border-primary" : "bg-card border-border"}`}
                 >
                   <p className="text-sm font-semibold text-foreground">🏦 1금융권</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">시중은행·특수은행</p>
-                  <p className="text-[11px] text-muted-foreground">DSR 40% 적용</p>
+                  <p className="text-lg font-bold text-primary mt-1">DSR 40%</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">시중은행·특수은행</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">KB·신한·하나·우리·농협 등</p>
                 </button>
                 <button
                   onClick={() => setFinancialSector("second")}
-                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "second" ? "bg-orange-100 border-orange-400" : "bg-card border-border"}`}
+                  className={`p-4 rounded-lg border text-left transition-colors ${financialSector === "second" ? "bg-orange-100 border-orange-400" : "bg-card border-border"}`}
                 >
                   <p className="text-sm font-semibold text-foreground">🏢 2금융권</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">상호금융</p>
-                  <p className="text-[11px] text-muted-foreground">DSR 50% 적용</p>
+                  <p className="text-lg font-bold text-orange-600 mt-1">DSR 50%</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">상호금융</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">새마을금고·지역농협·신협·산림조합 등</p>
                 </button>
               </div>
-              {financialSector === "first" && (
-                <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 mt-2">
-                  <p className="text-[12px] text-foreground">연간 총 원리금이 연소득의 40% 이내로 제한됩니다. 한도는 낮지만 금리가 유리합니다.</p>
-                </div>
-              )}
-              {financialSector === "second" && (
-                <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 mt-2">
-                  <p className="text-[12px] text-orange-800">연간 총 원리금이 연소득의 50% 이내로 제한됩니다. 새마을금고·지역농협·신협·산림조합 등 상호금융 기관에 해당합니다.</p>
-                </div>
-              )}
             </Field>
 
           </>
