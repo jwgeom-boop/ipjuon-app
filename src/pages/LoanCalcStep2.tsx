@@ -16,14 +16,7 @@ const toEok = (manwon: number) => {
   return `${manwon.toLocaleString()}만원`;
 };
 
-type IncomeType = "salary" | "business" | "pension";
 type DsrTier = "first" | "second";
-
-const INCOME_TYPES: { value: IncomeType; label: string; sub: string; rate: number }[] = [
-  { value: "salary", label: "근로소득", sub: "100% 인정", rate: 1.0 },
-  { value: "business", label: "사업소득", sub: "90% 인정", rate: 0.9 },
-  { value: "pension", label: "연금·기타", sub: "70% 인정", rate: 0.7 },
-];
 
 const DSR_TIERS: { value: DsrTier; label: string; sub: string; pct: number }[] = [
   { value: "first", label: "1금융권", sub: "DSR 40%", pct: 0.4 },
