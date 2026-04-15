@@ -1,6 +1,45 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Pencil, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import BottomTabBar from "@/components/BottomTabBar";
+
+const STORAGE_KEY = "apartment_info";
+
+interface ApartmentInfo {
+  apt_name: string;
+  unit_number: string;
+  move_in_date: string; // ISO date string
+}
+
+function loadAptInfo(): ApartmentInfo | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return null;
+}
+
+function saveAptInfo(info: ApartmentInfo) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
+}
+
+function calcDday(dateStr: string): string {
+  const target = new Date(dateStr);
+  const diff = Math.ceil((target.getTime() - Date.now()) / 86400000);
+  if (diff > 0) return `D-${diff}`;
+  if (diff === 0) return "D-Day";
+  return `D+${Math.abs(diff)}`;
+}
 
 const GUIDE_TABS = ["잔금·등기", "입주당일", "행정처리", "공과금"];
 const GUIDE_DATA: Record<string, Array<{ icon: string; title: string; desc: string }>> = {
@@ -34,31 +73,47 @@ const GUIDE_DATA: Record<string, Array<{ icon: string; title: string; desc: stri
 
 export default function Home() {
   const navigate = useNavigate();
-  const [dong, setDong] = useState("---");
-  const [ho, setHo] = useState("---");
-  const [moveInDate, setMoveInDate] = useState("입주일 미정");
-  const [dday, setDday] = useState("D-?");
+  const [aptInfo, setAptInfo] = useState<ApartmentInfo | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formUnit, setFormUnit] = useState("");
+  const [formDate, setFormDate] = useState<Date | undefined>(undefined);
   const [showGuide, setShowGuide] = useState(false);
   const [activeTab, setActiveTab] = useState("잔금·등기");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("ipjuon_contract");
-      if (stored) {
-        const data = JSON.parse(stored);
-        if (data.dong) setDong(data.dong);
-        if (data.ho) setHo(data.ho);
-        if (data.moveInDate) {
-          const date = new Date(data.moveInDate);
-          const diff = Math.ceil((date.getTime() - Date.now()) / 86400000);
-          setDday(diff > 0 ? `D-${diff}` : diff === 0 ? "D-Day" : `D+${Math.abs(diff)}`);
-          setMoveInDate(
-            date.toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" })
-          );
-        }
-      }
-    } catch { /* ignore */ }
+    setAptInfo(loadAptInfo());
   }, []);
+
+  const dday = useMemo(() => {
+    if (!aptInfo?.move_in_date) return null;
+    return calcDday(aptInfo.move_in_date);
+  }, [aptInfo]);
+
+  const openModal = () => {
+    if (aptInfo) {
+      setFormName(aptInfo.apt_name);
+      setFormUnit(aptInfo.unit_number);
+      setFormDate(aptInfo.move_in_date ? new Date(aptInfo.move_in_date) : undefined);
+    } else {
+      setFormName("");
+      setFormUnit("");
+      setFormDate(undefined);
+    }
+    setShowModal(true);
+  };
+
+  const handleSave = () => {
+    if (!formName.trim() || !formUnit.trim() || !formDate) return;
+    const info: ApartmentInfo = {
+      apt_name: formName.trim(),
+      unit_number: formUnit.trim(),
+      move_in_date: formDate.toISOString(),
+    };
+    saveAptInfo(info);
+    setAptInfo(info);
+    setShowModal(false);
+  };
 
   const cardStyle = {
     background: "rgba(255,255,255,0.72)",
@@ -111,34 +166,70 @@ export default function Home() {
           background: "rgba(0,0,0,0.08)",
         }} />
 
-        {/* 통합 헤더 바 */}
+        {/* 헤더 */}
         <div style={{
           position: "relative",
           zIndex: 10,
           flexShrink: 0,
-          height: 48,
+          minHeight: 48,
           background: "rgba(0,0,0,0.35)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 16px",
+          padding: "8px 16px",
         }}>
-          <span style={{ color: "#fff", fontWeight: 800, fontSize: 16 }}>
-            {dong}동 {ho}호
-          </span>
-          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 11 }}>
-            📅 {moveInDate} 입주예정 ({dday})
-          </span>
+          {aptInfo ? (
+            <>
+              <div style={{ flex: 1 }}>
+                <div style={{ color: "#fff", fontWeight: 800, fontSize: 15 }}>
+                  {aptInfo.apt_name} {aptInfo.unit_number}
+                </div>
+                <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span>📅 {format(new Date(aptInfo.move_in_date), "yyyy.MM.dd")} 입주예정</span>
+                  {dday && (
+                    <span style={{
+                      background: "rgba(255,255,255,0.2)",
+                      padding: "1px 8px",
+                      borderRadius: 10,
+                      fontWeight: 700,
+                      fontSize: 11,
+                    }}>{dday}</span>
+                  )}
+                </div>
+              </div>
+              <button onClick={openModal} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}>
+                <Pencil style={{ width: 16, height: 16, color: "rgba(255,255,255,0.8)" }} />
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={openModal}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 14,
+                width: "100%",
+              }}
+            >
+              나의 아파트 정보 입력하기
+              <ChevronRight style={{ width: 16, height: 16 }} />
+            </button>
+          )}
         </div>
 
-        {/* 상단 여백 (15%) */}
+        {/* 상단 여백 */}
         <div style={{ height: "15%" }} />
 
-        {/* 카드 그리드 — 지그재그 배치 */}
+        {/* 카드 그리드 */}
         <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 12px" }}>
-          {/* 협약은행 — 위 */}
           <div onClick={() => navigate("/loan/banks")} style={{ ...cardStyle, marginTop: 0 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#FF6B7A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏦</div>
             <div style={{ textAlign: "center" }}>
@@ -147,7 +238,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 잔금대출 셀프계산기 — 아래로 내림 */}
           <div onClick={() => navigate("/loan/calc/step1")} style={{ ...cardStyle, marginTop: 40 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#4A90D9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🔍</div>
             <div style={{ textAlign: "center" }}>
@@ -157,7 +247,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 제휴업체 — 위 */}
           <div onClick={() => navigate("/my/partners")} style={{ ...cardStyle, marginTop: -20 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#4CAF82", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🤝</div>
             <div style={{ textAlign: "center" }}>
@@ -166,7 +255,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* 공지사항 — 중간 */}
           <div onClick={() => navigate("/notices")} style={{ ...cardStyle, marginTop: 20 }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#F5A623", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>📢</div>
             <div style={{ textAlign: "center" }}>
@@ -176,13 +264,86 @@ export default function Home() {
           </div>
         </div>
 
-        {/* 하단 flex spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* 하단 탭바 */}
         <div style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
           <BottomTabBar />
         </div>
+
+        {/* 아파트 정보 입력 모달 */}
+        {showModal && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowModal(false)} />
+            <div className="animate-in slide-in-from-bottom duration-300" style={{
+              position: "relative",
+              background: "#fff",
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: "24px 20px 32px",
+              maxWidth: 430,
+              width: "100%",
+              margin: "0 auto",
+            }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: "#ddd" }} />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 20 }}>🏠 아파트 정보 입력</h2>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">아파트명</label>
+                  <Input
+                    value={formName}
+                    onChange={e => setFormName(e.target.value)}
+                    placeholder="예: 래미안퍼스티지"
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">동호수</label>
+                  <Input
+                    value={formUnit}
+                    onChange={e => setFormUnit(e.target.value)}
+                    placeholder="예: 101동 0102호"
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-foreground">입주예정일</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full h-11 justify-start text-left font-normal",
+                          !formDate && "text-muted-foreground"
+                        )}
+                      >
+                        {formDate ? format(formDate, "yyyy.MM.dd") : "날짜를 선택하세요"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={formDate}
+                        onSelect={setFormDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Button
+                  className="w-full h-12 text-base font-semibold"
+                  disabled={!formName.trim() || !formUnit.trim() || !formDate}
+                  onClick={handleSave}
+                >
+                  저장하기
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 입주 가이드 패널 */}
         {showGuide && (
