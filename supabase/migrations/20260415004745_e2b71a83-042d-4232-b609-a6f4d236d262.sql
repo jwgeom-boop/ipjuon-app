@@ -1,0 +1,1 @@
+ALTER TABLE public.consultation_requests ADD COLUMN unit_number text NOT NULL DEFAULT '';

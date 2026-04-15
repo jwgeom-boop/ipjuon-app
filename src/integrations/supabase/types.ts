@@ -24,6 +24,7 @@ export type Database = {
           resident_name: string
           resident_phone: string
           status: string
+          unit_number: string
           vendor_name: string
           vendor_type: string
         }
@@ -36,6 +37,7 @@ export type Database = {
           resident_name: string
           resident_phone: string
           status?: string
+          unit_number?: string
           vendor_name: string
           vendor_type: string
         }
@@ -48,6 +50,7 @@ export type Database = {
           resident_name?: string
           resident_phone?: string
           status?: string
+          unit_number?: string
           vendor_name?: string
           vendor_type?: string
         }
