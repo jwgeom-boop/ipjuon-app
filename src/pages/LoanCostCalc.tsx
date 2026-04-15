@@ -174,7 +174,7 @@ const LoanCostCalc = () => {
               <Checkbox checked={newlywed} onCheckedChange={(v) => setNewlywed(!!v)} className="mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-foreground">신혼부부 (혼인 5년 이내)</p>
-                <p className="text-[11px] text-muted-foreground">3억 이하(수도권 4억) 50% 감면</p>
+                <p className="text-[11px] text-muted-foreground">수도권 4억·비수도권 3억 이하 50% 감면 (최대 200만원)</p>
               </div>
             </label>
 
