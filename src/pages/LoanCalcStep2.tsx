@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,14 +16,7 @@ const toEok = (manwon: number) => {
   return `${manwon.toLocaleString()}만원`;
 };
 
-type IncomeType = "salary" | "business" | "pension";
 type DsrTier = "first" | "second";
-
-const INCOME_TYPES: { value: IncomeType; label: string; sub: string; rate: number }[] = [
-  { value: "salary", label: "근로소득", sub: "100% 인정", rate: 1.0 },
-  { value: "business", label: "사업소득", sub: "90% 인정", rate: 0.9 },
-  { value: "pension", label: "연금·기타", sub: "70% 인정", rate: 0.7 },
-];
 
 const DSR_TIERS: { value: DsrTier; label: string; sub: string; pct: number }[] = [
   { value: "first", label: "1금융권", sub: "DSR 40%", pct: 0.4 },
@@ -42,7 +35,6 @@ const LoanCalcStep2 = () => {
   const navigate = useNavigate();
 
   const [incomeRaw, setIncomeRaw] = useState("");
-  const [incomeType, setIncomeType] = useState<IncomeType>("salary");
   const [dsrTier, setDsrTier] = useState<DsrTier>("second");
 
   const [mortgageRaw, setMortgageRaw] = useState("");
@@ -50,14 +42,12 @@ const LoanCalcStep2 = () => {
   const [otherRaw, setOtherRaw] = useState("");
 
   const income = parseNum(incomeRaw);
-  const incomeRate = INCOME_TYPES.find((t) => t.value === incomeType)!.rate;
-  const recognizedIncome = Math.round(income * incomeRate);
   const dsrPct = DSR_TIERS.find((t) => t.value === dsrTier)!.pct;
 
   const existingMonthly = parseNum(mortgageRaw) + parseNum(creditRaw) + parseNum(otherRaw);
 
-  // DSR calculation
-  const availableAnnual = Math.max(0, recognizedIncome * dsrPct - existingMonthly * 12);
+  // DSR calculation (income used directly, no recognition rate)
+  const availableAnnual = Math.max(0, income * dsrPct - existingMonthly * 12);
   const availableMonthly = Math.round(availableAnnual / 12);
 
   // Reverse-calculate max loan (원리금균등 4% 30yr)
@@ -72,9 +62,9 @@ const LoanCalcStep2 = () => {
   const handleNext = () => {
     const step2Data = {
       income,
-      incomeType,
-      incomeRate,
-      recognizedIncome,
+      incomeType: "direct" as const,
+      incomeRate: 1.0,
+      recognizedIncome: income,
       dsrTier,
       dsrPct,
       existingMonthly,
@@ -94,9 +84,9 @@ const LoanCalcStep2 = () => {
 
         {/* ① 연소득 */}
         <div className="space-y-2">
-          <label className="text-sm font-semibold text-foreground">연간 소득 (세전)</label>
+          <label className="text-sm font-semibold text-foreground">연소득</label>
           <Input
-            placeholder="만원 단위 입력"
+            placeholder="예: 5,000 (만원 단위)"
             value={incomeRaw}
             onChange={(e) => setIncomeRaw(fmtNum(e.target.value))}
             className="h-11"
@@ -113,35 +103,17 @@ const LoanCalcStep2 = () => {
               </button>
             ))}
           </div>
-        </div>
-
-        {/* ② 소득 유형 */}
-        <div className="space-y-2">
-          <label className="text-sm font-semibold text-foreground">소득 유형</label>
-          <div className="grid grid-cols-3 gap-2">
-            {INCOME_TYPES.map((t) => (
-              <button
-                key={t.value}
-                onClick={() => setIncomeType(t.value)}
-                className={`py-2.5 px-2 rounded-lg border transition-colors text-center ${
-                  incomeType === t.value
-                    ? "bg-primary/10 border-primary text-primary"
-                    : "bg-card border-border text-foreground"
-                }`}
-              >
-                <p className="text-[13px] font-medium">{t.label}</p>
-                <p className="text-[10px] mt-0.5 opacity-70">{t.sub}</p>
-              </button>
-            ))}
-          </div>
           {income > 0 && (
-            <p className="text-xs text-accent font-medium">
-              인정 소득: {toEok(recognizedIncome)} (연소득 × {Math.round(incomeRate * 100)}%)
+            <p className="text-xs text-primary font-medium">
+              입력 연소득: {toEok(income)}
             </p>
           )}
+          <p className="text-[11px] text-muted-foreground">
+            ※ 실제 대출 가능금액은 금융기관별, 소득유형별로 상이할 수 있습니다
+          </p>
         </div>
 
-        {/* ③ DSR 기준 */}
+        {/* ② DSR 기준 */}
         <div className="space-y-2">
           <div className="flex items-center gap-1.5">
             <label className="text-sm font-semibold text-foreground">DSR 적용 기준</label>
@@ -174,7 +146,7 @@ const LoanCalcStep2 = () => {
           </div>
         </div>
 
-        {/* ④ 기존 대출 */}
+        {/* ③ 기존 대출 */}
         <div className="space-y-3">
           <label className="text-sm font-semibold text-foreground">기존 대출 월 원리금 합계</label>
           <div className="space-y-2.5">
