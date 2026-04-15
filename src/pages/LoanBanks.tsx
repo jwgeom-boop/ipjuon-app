@@ -43,7 +43,7 @@ const LoanBanks = () => {
   const handleSubmit = async () => {
     if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
 
-    const contractData = JSON.parse(localStorage.getItem("ipjuon_contract") || "{}");
+    const aptInfo = JSON.parse(localStorage.getItem("apartment_info") || "{}");
 
     const insertData = selectedBanks.map((vendorName) => ({
       resident_name: consultName,
@@ -51,8 +51,8 @@ const LoanBanks = () => {
       preferred_time: consultTime,
       vendor_name: vendorName,
       vendor_type: "bank",
-      complex_name: contractData?.complex || "",
-      unit_number: contractData?.unit || "",
+      complex_name: aptInfo?.apt_name || "",
+      unit_number: aptInfo?.unit_number || "",
       status: "대기중",
     }));
 
