@@ -39,11 +39,12 @@ const GRADE_INFO: Record<number, { label: string; color: string; hint: string; r
   10: { label: "불가", color: "bg-destructive/10 text-destructive", hint: "🚫 대출 불가", rateAdd: 1.5 },
 };
 
-const INCOME_TYPES = [
-  { key: "salary", icon: "💼", label: "직장인", rate: 1.0, hint: "근로소득 100% 인정 · 원천징수영수증 기준" },
-  { key: "business", icon: "🏪", label: "자영업자", rate: 0.8, hint: "사업소득 80% 인정 · 소득금액증명원 기준" },
-  { key: "freelancer", icon: "💻", label: "프리랜서", rate: 0.6, hint: "기타소득 60% 인정 · 계약서+통장 기준" },
-  { key: "other", icon: "📋", label: "기타", rate: 0.7, hint: "연금·임대소득 70% 인정 · 증빙 서류 필요" },
+const QUICK_INCOMES = [
+  { label: "3,000만", value: 3000 },
+  { label: "5,000만", value: 5000 },
+  { label: "7,000만", value: 7000 },
+  { label: "1억", value: 10000 },
+  { label: "1억5천", value: 15000 },
 ];
 
 const QUICK_RATES = [3.0, 3.3, 3.5, 3.8, 4.2, 5.0];
@@ -86,9 +87,7 @@ const LoanCalcDiagnosis = () => {
   const [housingCount, setHousingCount] = useState<number | null>(null);
 
   // Step 3
-  const [incomeType, setIncomeType] = useState<string | null>(null);
   const [incomeRaw, setIncomeRaw] = useState("");
-  const [tenure, setTenure] = useState<"over6" | "under6" | null>(null);
 
   // Step 4
   const [hasExistingLoan, setHasExistingLoan] = useState<boolean | null>(null);
@@ -107,9 +106,7 @@ const LoanCalcDiagnosis = () => {
   const appraisal = parseNum(appraisalRaw);
   const basePrice = appraisal > 0 ? appraisal : price;
   const income = parseNum(incomeRaw);
-  const incomeRate = INCOME_TYPES.find(t => t.key === incomeType)?.rate || 1;
-  let recognizedIncome = Math.round(income * incomeRate);
-  if (tenure === "under6") recognizedIncome = Math.round(recognizedIncome * 0.9);
+  const recognizedIncome = income;
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
   const dsrPct = financialSector === "first" ? 0.4 : financialSector === "second" ? 0.5 : 0.4;
   const inputRate = parseFloat(rateInput) || 0;
@@ -157,7 +154,7 @@ const LoanCalcDiagnosis = () => {
   // Step validation
   const step1Valid = price > 0 && location !== null && regulated !== null;
   const step2Valid = firstTime !== null && housingCount !== null;
-  const step3Valid = incomeType !== null && income > 0 && tenure !== null;
+  const step3Valid = income > 0;
   const step4Valid = hasExistingLoan !== null && financialSector !== null && creditGrade !== null;
   const step5Valid = inputRate > 0;
 
