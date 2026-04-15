@@ -75,7 +75,7 @@ const Partners = () => {
   const handleConsultSubmit = async () => {
     if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
 
-    const contract = JSON.parse(localStorage.getItem("ipjuon_contract") || "{}");
+    const aptInfo = JSON.parse(localStorage.getItem("apartment_info") || "{}");
 
     const { error } = await supabase
       .from("consultation_requests")
@@ -85,7 +85,8 @@ const Partners = () => {
         preferred_time: consultTime,
         vendor_name: selectedVendor,
         vendor_type: selectedVendorType,
-        complex_name: contract?.complex || "",
+        complex_name: aptInfo?.apt_name || "",
+        unit_number: aptInfo?.unit_number || "",
         status: "대기중",
       });
 
