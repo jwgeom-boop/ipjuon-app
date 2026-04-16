@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import BottomTabBar from "@/components/BottomTabBar";
@@ -77,9 +77,8 @@ const Partners = () => {
 
     const aptInfo = JSON.parse(localStorage.getItem("apartment_info") || "{}");
 
-    const { error } = await supabase
-      .from("consultation_requests")
-      .insert({
+    try {
+      await api.createConsultation({
         resident_name: consultName,
         resident_phone: consultPhone,
         preferred_time: consultTime,
@@ -89,8 +88,7 @@ const Partners = () => {
         unit_number: aptInfo?.unit_number || "",
         status: "대기중",
       });
-
-    if (error) {
+    } catch (error) {
       toast.error("신청 중 오류가 발생했습니다. 다시 시도해주세요.");
       return;
     }

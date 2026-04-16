@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/lib/api";
 import BottomTabBar from "@/components/BottomTabBar";
 import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
 import {
@@ -69,11 +69,9 @@ const LoanMain = () => {
       status: "대기중",
     }));
 
-    const { error } = await supabase
-      .from("consultation_requests")
-      .insert(insertData);
-
-    if (error) {
+    try {
+      await api.createConsultation(insertData);
+    } catch (error) {
       toast.error("신청 중 오류가 발생했습니다. 다시 시도해주세요.");
       return;
     }
