@@ -19,7 +19,7 @@ const CATEGORIES = [
 const CATEGORY_LABELS: Record<string, string> = {
   interior: "인테리어",
   moving: "이사",
-  internet: "인터넷/TV",
+  internet: "인터넷·TV",
   cleaning: "청소",
   furniture: "가구",
   appliance: "가전",
@@ -123,7 +123,7 @@ const Partners = () => {
                 <button
                   onClick={() => {
                     setSelectedVendor(vendor.name);
-                    setSelectedVendorType(selectedCategory);
+                    setSelectedVendorType(CATEGORY_LABELS[selectedCategory] ?? selectedCategory);
                     setShowConsultModal(true);
                   }}
                   className="w-full bg-primary text-primary-foreground text-sm font-bold py-2.5 rounded-xl mt-3"

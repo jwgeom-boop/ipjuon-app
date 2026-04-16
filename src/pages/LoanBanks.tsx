@@ -50,7 +50,7 @@ const LoanBanks = () => {
       resident_phone: consultPhone,
       preferred_time: consultTime,
       vendor_name: vendorName,
-      vendor_type: "bank",
+      vendor_type: "은행",
       complex_name: aptInfo?.apt_name || "",
       unit_number: aptInfo?.unit_number || "",
       status: "대기중",
