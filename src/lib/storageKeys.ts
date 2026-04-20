@@ -21,6 +21,26 @@ export function captureInviteParams() {
   if (invite) localStorage.setItem(STORAGE_KEYS.inviteId, invite);
 }
 
+const API_BASE_URL = "https://banking-coroner-grader.ngrok-free.dev/api";
+
+export async function trackInviteEvent(event: "opened" | "registered") {
+  if (typeof window === "undefined") return;
+  const id = localStorage.getItem(STORAGE_KEYS.inviteId);
+  if (!id) return;
+  try {
+    await fetch(`${API_BASE_URL}/invite/${id}/track`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
+      },
+      body: JSON.stringify({ event }),
+    });
+  } catch {
+    // 추적 실패는 사용자 흐름 방해하지 않음
+  }
+}
+
 export const SESSION_KEYS = {
   calcResult: "ipjuon_calc_result",
   costResult: "ipjuon_cost_result",

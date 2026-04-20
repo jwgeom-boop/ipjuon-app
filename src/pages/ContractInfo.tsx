@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { STORAGE_KEYS, trackInviteEvent } from "@/lib/storageKeys";
 
 const fmtNum = (v: string) => v.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const parseNum = (v: string) => Number(v.replace(/\D/g, "")) || 0;
@@ -75,6 +75,7 @@ const ContractInfo = () => {
     };
     localStorage.setItem("ipjuon_contract", JSON.stringify(info));
     localStorage.removeItem("ipjuon_banner_closed");
+    trackInviteEvent("registered");
     navigate("/home", { replace: true });
   };
 

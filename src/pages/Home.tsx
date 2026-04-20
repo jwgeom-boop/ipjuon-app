@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import BottomTabBar from "@/components/BottomTabBar";
+import { trackInviteEvent } from "@/lib/storageKeys";
 
 const STORAGE_KEY = "apartment_info";
 
@@ -116,6 +117,7 @@ export default function Home() {
     saveAptInfo(info);
     setAptInfo(info);
     setShowModal(false);
+    trackInviteEvent("registered");
   };
 
   const cardStyle = {
