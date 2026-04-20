@@ -96,7 +96,10 @@ export default function Home() {
       setFormUnit(aptInfo.unit_number);
       setFormDate(aptInfo.move_in_date ? new Date(aptInfo.move_in_date) : undefined);
     } else {
-      setFormName("");
+      const inviteComplex = typeof window !== "undefined"
+        ? localStorage.getItem("ipjuon_invite_complex") || ""
+        : "";
+      setFormName(inviteComplex);
       setFormUnit("");
       setFormDate(undefined);
     }
