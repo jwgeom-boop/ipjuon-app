@@ -8,7 +8,18 @@ export const STORAGE_KEYS = {
   onboarded: "ipjuon_onboarded",
   authToken: "auth_token",
   userPhone: "user_phone",
+  inviteComplex: "ipjuon_invite_complex",
+  inviteId: "ipjuon_invite_id",
 } as const;
+
+export function captureInviteParams() {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  const complex = params.get("complex");
+  const invite = params.get("invite");
+  if (complex) localStorage.setItem(STORAGE_KEYS.inviteComplex, complex);
+  if (invite) localStorage.setItem(STORAGE_KEYS.inviteId, invite);
+}
 
 export const SESSION_KEYS = {
   calcResult: "ipjuon_calc_result",

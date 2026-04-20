@@ -1,10 +1,12 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { captureInviteParams } from "@/lib/storageKeys";
 
 const Splash = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    captureInviteParams();
     const timer = setTimeout(() => {
       const hasAuth = localStorage.getItem("auth_token");
       const onboarded = localStorage.getItem("ipjuon_onboarded");

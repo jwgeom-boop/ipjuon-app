@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { CalendarIcon, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 
 const fmtNum = (v: string) => v.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const parseNum = (v: string) => Number(v.replace(/\D/g, "")) || 0;
@@ -47,7 +48,8 @@ const ContractInfo = () => {
     }
   }, []);
 
-  const [danjiName, setDanjiName] = useState(existing?.complex || existing?.danjiName || "");
+  const inviteComplex = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.inviteComplex) || "" : "";
+  const [danjiName, setDanjiName] = useState(existing?.complex || existing?.danjiName || inviteComplex);
   const [dong, setDong] = useState(existing?.dong || "");
   const [ho, setHo] = useState(existing?.ho || "");
   const [priceRaw, setPriceRaw] = useState(existing?.salePrice ? fmtNum(String(Math.round(existing.salePrice / 10000))) : (existing?.price ? fmtNum(String(existing.price)) : ""));
