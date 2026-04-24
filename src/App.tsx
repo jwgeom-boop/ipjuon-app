@@ -18,6 +18,7 @@ import Partners from "./pages/Partners";
 import Notices from "./pages/Notices";
 import NotFound from "./pages/NotFound";
 import ConsultationDashboard from "./pages/ConsultationDashboard";
+import { RouteTitle } from "./components/RouteTitle";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <RouteTitle />
         <Routes>
           <Route path="/" element={<Splash />} />
           <Route path="/login" element={<Login />} />
