@@ -21,7 +21,9 @@ export function captureInviteParams() {
   if (invite) localStorage.setItem(STORAGE_KEYS.inviteId, invite);
 }
 
-const API_BASE_URL = "https://banking-coroner-grader.ngrok-free.dev/api";
+const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  "https://banking-coroner-grader.ngrok-free.dev/api";
 
 export async function trackInviteEvent(event: "opened" | "registered") {
   if (typeof window === "undefined") return;

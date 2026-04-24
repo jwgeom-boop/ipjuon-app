@@ -1,4 +1,5 @@
-const API_BASE_URL = 'https://banking-coroner-grader.ngrok-free.dev/api'
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+  ?? 'https://banking-coroner-grader.ngrok-free.dev/api'
 const HEADERS = {
   'Content-Type': 'application/json',
   'ngrok-skip-browser-warning': 'true',
