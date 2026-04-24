@@ -16,13 +16,23 @@ const toEok = (m: number) => {
 
 const STEP_LABELS = ["아파트 정보", "주택 조건", "소득 정보", "부채·신용", "대출 조건"];
 
-/* ── LTV Table ── */
+/* ── LTV Table (이 아파트 취득 후 보유 주택 수 기준)
+   ┌─────────────────────┬────────┬────────┐
+   │ 거래 후 주택 수     │ 비규제 │ 규제   │
+   ├─────────────────────┼────────┼────────┤
+   │ 1주택 + 생애최초    │  80%   │  80%   │
+   │ 1주택 (무→1)        │  70%   │  50%   │
+   │ 2주택 (1→2, 처분약정)│  60%   │  50%   │
+   │ 3주택+ (다주택)     │  60%   │  30%   │
+   └─────────────────────┴────────┴────────┘
+   ※ 2주택은 기존 주택 처분조건부 가정 (미체결 시 실제 대출 어려움)
+*/
 function calcLTV(firstTime: boolean, housingCount: number, regulated: boolean): number {
-  if (housingCount >= 3) return regulated ? 0 : 40;
-  if (housingCount === 2) return regulated ? 30 : 60;
-  // 1주택
-  if (firstTime) return 80;
-  return 70;
+  // housingCount = 이 아파트 포함 거래 후 본인 보유 주택 수
+  if (housingCount === 1 && firstTime) return 80;        // 무주택자 + 생애최초
+  if (housingCount === 1) return regulated ? 50 : 70;    // 무주택자 1채 매입
+  if (housingCount === 2) return regulated ? 50 : 60;    // 1주택자 추가 (처분조건부)
+  return regulated ? 30 : 60;                             // 다주택 (3주택 이상)
 }
 
 /* ── Credit grade info ── */
@@ -136,8 +146,7 @@ const LoanCalcDiagnosis = () => {
 
   // Rejection
   const rejections: string[] = [];
-  if (ltvPct === 0) rejections.push("다주택 조정지역: 현재 조건에서 주택담보대출 불가. 기존 주택 처분 후 재신청하세요.");
-  if (dsrLimit <= 0 && ltvPct !== 0) rejections.push("DSR 초과: 소득 대비 기존 대출 상환 부담이 높아 추가 대출이 어렵습니다.");
+  if (dsrLimit <= 0) rejections.push("DSR 초과: 소득 대비 기존 대출 상환 부담이 높아 추가 대출이 어렵습니다.");
 
   const warnings: string[] = [];
   
@@ -233,10 +242,24 @@ const LoanCalcDiagnosis = () => {
               </div>
             </Field>
 
-            <Field label="조정대상지역 여부">
+            <Field label="규제지역 여부">
               <div className="grid grid-cols-2 gap-2">
-                <ChoiceBtn selected={regulated === true} onClick={() => setRegulated(true)} title="조정대상지역" sub="강남3구·용산 등" />
-                <ChoiceBtn selected={regulated === false} onClick={() => setRegulated(false)} title="비조정지역" sub="일반 지역" />
+                <ChoiceBtn
+                  selected={regulated === true}
+                  onClick={() => setRegulated(true)}
+                  title="규제지역"
+                  sub="강남·서초·송파·용산"
+                />
+                <ChoiceBtn
+                  selected={regulated === false}
+                  onClick={() => setRegulated(false)}
+                  title="비규제지역"
+                  sub="그 외 모든 지역"
+                />
+              </div>
+              <div className="mt-2 px-3 py-2 rounded-md bg-muted/50 border border-border text-[11px] text-muted-foreground leading-relaxed">
+                <p className="font-semibold text-foreground mb-1">📍 규제지역 (투기과열·조정대상)</p>
+                <p>현재 <span className="text-foreground font-medium">서울 강남·서초·송파·용산</span> 4개 구만 지정 (2024 기준).<br />그 외 지역은 모두 비규제지역으로 선택하세요.</p>
               </div>
             </Field>
           </>
@@ -263,12 +286,12 @@ const LoanCalcDiagnosis = () => {
               </div>
             </Field>
 
-            <Field label="취득 후 주택 수">
+            <Field label="이 아파트 포함 후 본인 주택 수">
               <div className="space-y-2">
                 {[
-                  { count: 1, icon: "🏠", title: "1주택 (무주택→1주택)", sub: "현재 보유 없음" },
-                  { count: 2, icon: "🏡", title: "2주택 (1주택→2주택)", sub: "기존 1채 보유 중" },
-                  { count: 3, icon: "🏘️", title: "3주택 이상 (다주택)", sub: "기존 2채 이상" },
+                  { count: 1, icon: "🏠", title: "1주택 (이번이 첫 집)", sub: "현재 무주택" },
+                  { count: 2, icon: "🏡", title: "2주택 (1주택자, 기존 처분 예정)", sub: "기존 1채는 처분 약정" },
+                  { count: 3, icon: "🏘️", title: "3주택 이상 (다주택자)", sub: "기존 2채 이상 보유" },
                 ].map(h => {
                   const ltv = (firstTime !== null && regulated !== null) ? calcLTV(firstTime === true, h.count, regulated === true) : null;
                   const selected = housingCount === h.count;
@@ -292,6 +315,37 @@ const LoanCalcDiagnosis = () => {
                 })}
               </div>
             </Field>
+
+            <div className="rounded-md border border-border bg-muted/40 p-3">
+              <p className="text-[12px] font-semibold text-foreground mb-2">📋 LTV 기준표 (2024년 기준)</p>
+              <table className="w-full text-[11px]">
+                <thead>
+                  <tr className="text-muted-foreground border-b border-border/60">
+                    <th className="text-left pb-1 font-medium">구분</th>
+                    <th className="text-right pb-1 font-medium">비규제</th>
+                    <th className="text-right pb-1 font-medium">규제지역</th>
+                  </tr>
+                </thead>
+                <tbody className="text-foreground">
+                  {[
+                    { key: "first", label: "생애최초 (무주택)", non: 80, reg: 80, match: firstTime === true && housingCount === 1 },
+                    { key: "h1", label: "1주택 (무주택→1)", non: 70, reg: 50, match: firstTime === false && housingCount === 1 },
+                    { key: "h2", label: "2주택 (1주택→2, 처분조건부)", non: 60, reg: 50, match: housingCount === 2 },
+                    { key: "h3", label: "3주택+ (다주택)", non: 60, reg: 30, match: housingCount === 3 },
+                  ].map(row => (
+                    <tr key={row.key} className={`border-b border-border/30 ${row.match ? "bg-primary/10 font-semibold" : ""}`}>
+                      <td className="py-1">{row.label}</td>
+                      <td className={`text-right py-1 ${row.match && regulated === false ? "text-primary font-bold" : ""}`}>{row.non}%</td>
+                      <td className={`text-right py-1 ${row.match && regulated === true ? "text-primary font-bold" : ""}`}>{row.reg}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+                ※ 규제지역 = 서울 강남·서초·송파·용산 4개 구<br/>
+                ※ 2주택은 기존 주택 처분 약정 시 가능 (미약정 시 신규 대출 제한)
+              </p>
+            </div>
 
             {ltvPct !== null && (
               <div className="rounded-[14px] px-4 py-4 text-primary-foreground" style={{ background: "linear-gradient(135deg, #0E2347, #1654A8)" }}>
