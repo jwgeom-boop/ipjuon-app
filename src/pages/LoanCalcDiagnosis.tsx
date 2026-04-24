@@ -110,7 +110,11 @@ const LoanCalcDiagnosis = () => {
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
   const dsrPct = financialSector === "first" ? 0.4 : financialSector === "second" ? 0.5 : 0.4;
   const inputRate = parseFloat(rateInput) || 0;
-  const rateAdd = 0;
+  // 정부 스트레스 DSR 규제 (2024~): 변동·혼합 주담대 한도 산정 시 가산금리 적용.
+  // 수도권 +3.0%p, 비수도권 +0.75%p (변동금리 100% 비율 가정 — 보수적 추정).
+  // 실제 표시 금리(effectiveRate)와 분리하여 한도 계산용으로만 사용.
+  const stressRate = location === "metro" ? 3.0 : location === "local" ? 0.75 : 0;
+  const dsrCalcRate = inputRate + stressRate;
   const effectiveRate = inputRate;
   const desired = parseNum(desiredRaw);
 
@@ -122,7 +126,8 @@ const LoanCalcDiagnosis = () => {
   const availableMonthly = recognizedIncome > 0
     ? Math.round(Math.max(0, recognizedIncome * dsrPct / 12 - existingMonthly))
     : 0;
-  const dsrLimit = effectiveRate > 0 ? calcMaxLoan(availableMonthly, effectiveRate, termYears) : 0;
+  // DSR 한도는 스트레스 가산금리 기준, 실제 월 상환액은 입력 금리 기준으로 표시
+  const dsrLimit = dsrCalcRate > 0 ? calcMaxLoan(availableMonthly, dsrCalcRate, termYears) : 0;
 
   let appliedLimit = Math.min(ltvLimit, dsrLimit);
   if (desired > 0) appliedLimit = Math.min(appliedLimit, desired);
@@ -506,11 +511,13 @@ const LoanCalcDiagnosis = () => {
                   ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권 — 상호금융"} (DSR ${Math.round(dsrPct * 100)}%)`],
                   ["연소득", toEok(income)],
                   ["기존대출 상환액", `${existingMonthly.toLocaleString()}만원/월`],
+                  ["스트레스 가산금리", `+${stressRate.toFixed(2)}%p (${location === "metro" ? "수도권" : "비수도권"})`],
+                  ["DSR 산정금리", `${dsrCalcRate.toFixed(2)}% (입력 ${inputRate.toFixed(2)}% + 스트레스)`],
                   ["DSR 최대 한도", toEok(dsrLimit)],
                 ]} />
 
                 <DetailCard title="📊 대출 조건" headerColor="bg-accent" items={[
-                  ["적용 금리", `${effectiveRate.toFixed(2)}%`],
+                  ["입력 금리 (실 적용)", `${effectiveRate.toFixed(2)}%`],
                   ["대출 기간", `${termYears}년`],
                 ]} />
 
