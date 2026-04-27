@@ -61,6 +61,30 @@ export const api = {
     return res.json()
   },
 
+  // 단지×은행 상세 — 단지별 데이터 우선, 없으면 BankProfile (글로벌) fallback
+  b2cComplexBankDetail: async (complexName: string, bankName: string) => {
+    const res = await fetch(
+      `${API_BASE_URL}/b2c/complex-banks/${encodeURIComponent(complexName)}/${encodeURIComponent(bankName)}`,
+      { headers: HEADERS },
+    )
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error('단지별 은행 상세 조회 실패')
+    return res.json() as Promise<{
+      source: 'complex' | 'global'
+      bank_name: string
+      complex_name?: string
+      branch_name?: string | null
+      greeting?: string
+      products?: string
+      business_hours?: string
+      notice?: string
+      is_closed?: boolean
+      closing_message?: string
+      contact_phone?: string
+      contact_email?: string
+    }>
+  },
+
   // 동의서 제출 — 마감 안 된 모든 은행에 ConsultationRequest 자동 생성됨
   submitConsent: async (data: {
     resident_name: string

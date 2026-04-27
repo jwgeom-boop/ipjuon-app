@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Phone, Mail, Clock, AlertCircle } from "lucide-react";
+import { ArrowLeft, Phone, Mail, Clock, AlertCircle, Building2, Info } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { COMPLEX_NAMES } from "@/data/bankData";
 
 interface BankDetail {
+  source?: "complex" | "global";
   bank_name: string;
+  complex_name?: string;
+  branch_name?: string | null;
   greeting?: string;
   products?: string;
   business_hours?: string;
@@ -22,6 +26,14 @@ export default function LoanBankDetail() {
   const [data, setData] = useState<BankDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 단지명: contract.complex (사용자 등록한 단지) 우선, 없으면 기본 단지명
+  const complexName = useMemo(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem("ipjuon_contract") || "null");
+      return c?.complex || c?.danjiName || COMPLEX_NAMES[0];
+    } catch { return COMPLEX_NAMES[0]; }
+  }, []);
+
   // 동의서 작성 여부 확인 — 미작성 시 카드 목록으로 돌려보냄 (localStorage = 영구)
   useEffect(() => {
     const consentId = localStorage.getItem("ipjuon_consent_id");
@@ -35,14 +47,15 @@ export default function LoanBankDetail() {
     if (!bankName) return;
     (async () => {
       try {
-        const res = await api.b2cBankDetail(decodeURIComponent(bankName));
+        // 1순위: 단지×은행 상세 (단지별 데이터 우선, 없으면 자동 글로벌 fallback)
+        const res = await api.b2cComplexBankDetail(complexName, decodeURIComponent(bankName));
         setData(res);
       } catch (e: any) {
         toast.error(e?.message ?? "은행 정보 조회 실패");
       }
       setLoading(false);
     })();
-  }, [bankName]);
+  }, [bankName, complexName]);
 
   return (
     <div className="app-shell min-h-screen bg-background">
@@ -50,9 +63,20 @@ export default function LoanBankDetail() {
         <button onClick={() => navigate(-1)} className="p-1">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
-        <h1 className="text-base font-bold text-foreground truncate">
-          {data?.bank_name || decodeURIComponent(bankName)}
-        </h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-bold text-foreground truncate">
+              {data?.bank_name || decodeURIComponent(bankName)}
+            </h1>
+            {data?.branch_name && (
+              <span className="text-xs text-muted-foreground">· {data.branch_name}</span>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground truncate">
+            <Building2 className="inline w-3 h-3 mr-0.5" />
+            {complexName}
+          </p>
+        </div>
       </header>
 
       {loading && (
@@ -138,6 +162,12 @@ export default function LoanBankDetail() {
             <p className="text-[11px] text-muted-foreground">
               ✓ 이미 동의서를 작성하셨습니다. {data.bank_name}을 포함한 협약 은행에서 1~2 영업일 내에 직접 연락 드립니다.
             </p>
+            {data.source === "global" && (
+              <p className="text-[10px] text-muted-foreground mt-1.5 flex items-start gap-1">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                {complexName} 단지 전용 정보가 아직 등록되지 않아 일반 정보를 안내 드립니다.
+              </p>
+            )}
           </div>
         </main>
       )}
