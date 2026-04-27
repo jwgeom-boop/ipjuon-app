@@ -39,4 +39,48 @@ export const api = {
     if (!res.ok) throw new Error('업데이트 실패')
     return res.json()
   },
+
+  // 입주민용 은행 카드 목록 (인사글 미리보기 + 마감 여부)
+  b2cBankList: async () => {
+    const res = await fetch(`${API_BASE_URL}/b2c/banks`, { headers: HEADERS })
+    if (!res.ok) throw new Error('은행 목록 조회 실패')
+    return res.json() as Promise<Array<{
+      bank_name: string
+      greeting_preview?: string
+      is_closed?: boolean
+      closing_message?: string
+      business_hours?: string
+    }>>
+  },
+
+  // 은행 상세 (동의서 후 풀 콘텐츠)
+  b2cBankDetail: async (bankName: string) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/banks/${encodeURIComponent(bankName)}`, { headers: HEADERS })
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error('은행 상세 조회 실패')
+    return res.json()
+  },
+
+  // 동의서 제출 — 마감 안 된 모든 은행에 ConsultationRequest 자동 생성됨
+  submitConsent: async (data: {
+    resident_name: string
+    resident_phone: string
+    resident_complex?: string
+    dong?: string
+    ho?: string
+    apt_type?: string
+    terms_version?: string
+    invite_id?: string
+  }) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consents`, {
+      method: 'POST', headers: HEADERS, body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('동의서 제출 실패')
+    return res.json() as Promise<{
+      consent_id: string
+      distributed_count: number
+      distributed_banks: string[]
+      message: string
+    }>
+  },
 }

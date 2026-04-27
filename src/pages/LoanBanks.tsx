@@ -1,24 +1,25 @@
-import { useState, useMemo, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
+import { ConsentModal } from "@/components/ConsentModal";
 
-const TIME_OPTIONS = ["오전", "오후", "저녁"];
+interface BankProfileLite {
+  bank_name: string;
+  greeting_preview?: string;
+  is_closed?: boolean;
+  closing_message?: string;
+  business_hours?: string;
+}
 
 const LoanBanks = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
-  const [showModal, setShowModal] = useState(false);
-  const [consultName, setConsultName] = useState("");
-  const [consultPhone, setConsultPhone] = useState(() => {
-    try { return localStorage.getItem("user_phone") || ""; } catch { return ""; }
-  });
-  const [consultTime, setConsultTime] = useState<string | null>(null);
+  const [profiles, setProfiles] = useState<Record<string, BankProfileLite>>({});
+  const [consentModalFor, setConsentModalFor] = useState<string | null>(null);
+  const [profilesLoading, setProfilesLoading] = useState(true);
 
   const contract = useMemo(() => {
     try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
@@ -27,6 +28,21 @@ const LoanBanks = () => {
   const complexName = contract?.complex || COMPLEX_NAMES[0];
   const { banks1, banks2 } = useMemo(() => getBanksForComplex(complexName), [complexName]);
 
+  // 백엔드에서 은행 프로필 fetch (인사글 미리보기 + 마감 여부)
+  useEffect(() => {
+    (async () => {
+      try {
+        const list = await api.b2cBankList();
+        const byName: Record<string, BankProfileLite> = {};
+        list.forEach((p) => { byName[p.bank_name] = p; });
+        setProfiles(byName);
+      } catch {
+        // 백엔드 없어도 정적 카드는 보이게 함
+      }
+      setProfilesLoading(false);
+    })();
+  }, []);
+
   useEffect(() => {
     if (location.hash) {
       const el = document.getElementById(location.hash.replace("#", ""));
@@ -34,40 +50,32 @@ const LoanBanks = () => {
     }
   }, [location.hash]);
 
-  const toggleBank = (name: string) => {
-    setSelectedBanks(prev =>
-      prev.includes(name) ? prev.filter(b => b !== name) : [...prev, name]
-    );
+  const hasConsent = () => {
+    try { return !!sessionStorage.getItem("ipjuon_consent_id"); } catch { return false; }
   };
 
-  const handleSubmit = async () => {
-    if (!consultName.trim() || !consultPhone.trim() || !consultTime) return;
-
-    const aptInfo = JSON.parse(localStorage.getItem("apartment_info") || "{}");
-
-    const insertData = selectedBanks.map((vendorName) => ({
-      resident_name: consultName,
-      resident_phone: consultPhone,
-      preferred_time: consultTime,
-      vendor_name: vendorName,
-      vendor_type: "은행",
-      complex_name: aptInfo?.apt_name || "",
-      unit_number: aptInfo?.unit_number || "",
-      status: "대기중",
-    }));
-
-    try {
-      await api.createConsultation(insertData);
-    } catch (error) {
-      toast.error("신청 중 오류가 발생했습니다. 다시 시도해주세요.");
+  const handleBankClick = (bankName: string) => {
+    const profile = profiles[bankName];
+    if (profile?.is_closed) {
+      toast.info(profile.closing_message || `${bankName}은 모집 마감되었습니다.`);
       return;
     }
+    if (hasConsent()) {
+      // 이미 동의 → 상세 페이지로 직행
+      navigate(`/loan/banks/${encodeURIComponent(bankName)}`);
+    } else {
+      // 미동의 → 동의서 모달 띄움
+      setConsentModalFor(bankName);
+    }
+  };
 
-    setShowModal(false);
-    setSelectedBanks([]);
-    setConsultName("");
-    setConsultTime(null);
-    toast.success("상담 신청이 완료되었습니다.\n1~2 영업일 내에 연락 드리겠습니다.");
+  const handleConsentSuccess = (_consentId: string, _count: number) => {
+    const target = consentModalFor;
+    setConsentModalFor(null);
+    // 동의 성공 → 클릭한 은행 상세 페이지로 이동
+    if (target) {
+      setTimeout(() => navigate(`/loan/banks/${encodeURIComponent(target)}`), 100);
+    }
   };
 
   return (
@@ -79,22 +87,27 @@ const LoanBanks = () => {
         <h1 className="text-base font-bold text-foreground">협약 금융기관 전체</h1>
       </header>
 
-      <div className="px-4 py-5 space-y-5 pb-32">
+      <div className="px-4 py-5 space-y-5 pb-24">
         <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
           <p className="text-[13px] text-foreground font-medium">🏠 {complexName} 참여 금융기관</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">해당 단지 협약 은행만 표시됩니다</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {hasConsent()
+              ? "✓ 동의 완료 — 카드를 누르면 상세 정보를 볼 수 있습니다"
+              : "은행 카드를 누르면 동의서 후 상세 정보 / 상담 안내가 시작됩니다"}
+          </p>
         </div>
 
         {banks1.length > 0 && (
           <div id="1금융">
             <p className="text-sm font-bold text-foreground mb-3">🏦 1금융권 (DSR 40%)</p>
             <div className="space-y-3">
-              {banks1.map(bank => (
+              {banks1.map((bank) => (
                 <BankCard
                   key={bank.name}
                   bank={bank}
-                  selected={selectedBanks.includes(bank.name)}
-                  onToggle={() => toggleBank(bank.name)}
+                  profile={profiles[bank.name]}
+                  loading={profilesLoading}
+                  onClick={() => handleBankClick(bank.name)}
                 />
               ))}
             </div>
@@ -107,12 +120,13 @@ const LoanBanks = () => {
           <div id="2금융">
             <p className="text-sm font-bold text-foreground mb-3">🏢 상호금융 (DSR 50%)</p>
             <div className="space-y-3">
-              {banks2.map(bank => (
+              {banks2.map((bank) => (
                 <BankCard
                   key={bank.name}
                   bank={bank}
-                  selected={selectedBanks.includes(bank.name)}
-                  onToggle={() => toggleBank(bank.name)}
+                  profile={profiles[bank.name]}
+                  loading={profilesLoading}
+                  onClick={() => handleBankClick(bank.name)}
                 />
               ))}
             </div>
@@ -120,78 +134,59 @@ const LoanBanks = () => {
         )}
       </div>
 
-      {selectedBanks.length > 0 && (
-        <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4 z-40">
-          <button
-            onClick={() => setShowModal(true)}
-            className="w-full h-14 bg-primary text-white rounded-2xl font-bold text-base shadow-lg"
-          >
-            선택한 {selectedBanks.length}개 은행 상담 신청하기
-          </button>
-        </div>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-[430px] bg-card rounded-t-2xl px-5 pt-5 pb-8 animate-in slide-in-from-bottom duration-300">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-bold text-foreground">선택 은행 상담 신청</h3>
-              <button onClick={() => setShowModal(false)} className="p-1"><X className="w-5 h-5 text-muted-foreground" /></button>
-            </div>
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {selectedBanks.map(name => (
-                <span key={name} className="bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
-                  {name}
-                </span>
-              ))}
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">이름</label>
-                <Input value={consultName} onChange={e => setConsultName(e.target.value)} placeholder="이름을 입력하세요" className="h-11" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">연락처</label>
-                <Input value={consultPhone} onChange={e => setConsultPhone(e.target.value)} placeholder="010-0000-0000" className="h-11" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-foreground">희망 상담 시간</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {TIME_OPTIONS.map(t => (
-                    <button key={t} onClick={() => setConsultTime(t)}
-                      className={`py-2.5 rounded-lg border text-sm font-medium transition-colors ${consultTime === t ? "bg-primary/10 border-primary text-primary" : "bg-card border-border text-foreground"}`}
-                    >{t}</button>
-                  ))}
-                </div>
-              </div>
-              <Button className="w-full h-12 text-base font-semibold mt-2" disabled={!consultName.trim() || !consultPhone.trim() || !consultTime} onClick={handleSubmit}>
-                신청 완료
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConsentModal
+        open={!!consentModalFor}
+        onClose={() => setConsentModalFor(null)}
+        onSuccess={handleConsentSuccess}
+        bankName={consentModalFor ?? undefined}
+      />
     </div>
   );
 };
 
-function BankCard({ bank, selected, onToggle }: { bank: BankInfo; selected: boolean; onToggle: () => void }) {
+function BankCard({
+  bank, profile, loading, onClick,
+}: {
+  bank: BankInfo;
+  profile?: BankProfileLite;
+  loading: boolean;
+  onClick: () => void;
+}) {
+  const isClosed = !!profile?.is_closed;
   return (
     <div
-      onClick={onToggle}
+      onClick={onClick}
       className={`rounded-[14px] border-2 bg-card p-4 cursor-pointer transition-colors ${
-        selected ? "border-primary bg-primary/5" : "border-border"
+        isClosed
+          ? "border-border opacity-60 hover:opacity-70"
+          : "border-border hover:border-primary"
       }`}
     >
-      <div className="flex items-center justify-between">
-        <p className="text-base font-bold text-foreground">{bank.icon} {bank.name}</p>
-        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
-          selected ? "bg-primary border-primary" : "border-gray-300"
-        }`}>
-          {selected && <span className="text-white text-xs font-bold">✓</span>}
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <p className="text-base font-bold text-foreground">
+            {bank.icon} {bank.name}
+          </p>
+          {isClosed && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full">
+              <AlertCircle className="w-3 h-3" />
+              마감
+            </span>
+          )}
         </div>
+        <span className="text-[11px] text-muted-foreground">{isClosed ? "" : "›"}</span>
       </div>
+      {profile?.greeting_preview && !loading && (
+        <p className="text-[12px] text-muted-foreground leading-snug line-clamp-2">
+          {profile.greeting_preview}
+        </p>
+      )}
+      {profile?.business_hours && !isClosed && (
+        <p className="text-[10px] text-muted-foreground mt-1">⏰ {profile.business_hours}</p>
+      )}
+      {isClosed && profile?.closing_message && (
+        <p className="text-[11px] text-red-600 mt-1">{profile.closing_message}</p>
+      )}
     </div>
   );
 }

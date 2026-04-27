@@ -11,6 +11,7 @@ import Home from "./pages/Home";
 import LoanMain from "./pages/LoanMain";
 import LoanCalcDiagnosis from "./pages/LoanCalcDiagnosis";
 import LoanBanks from "./pages/LoanBanks";
+import LoanBankDetail from "./pages/LoanBankDetail";
 import LoanCostCalc from "./pages/LoanCostCalc";
 import Payment from "./pages/Payment";
 import MyPage from "./pages/MyPage";
@@ -38,6 +39,7 @@ const App = () => (
           <Route path="/loan" element={<LoanMain />} />
           <Route path="/loan/calc/step1" element={<LoanCalcDiagnosis />} />
           <Route path="/loan/banks" element={<LoanBanks />} />
+          <Route path="/loan/banks/:bankName" element={<LoanBankDetail />} />
           <Route path="/loan/cost-calc" element={<LoanCostCalc />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/my" element={<MyPage />} />
