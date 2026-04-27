@@ -159,7 +159,7 @@ const LoanBanks = () => {
 };
 
 function BankCard({
-  bank, profile, loading, onClick,
+  bank, profile, onClick,
 }: {
   bank: BankInfo;
   profile?: BankProfileLite;
@@ -170,13 +170,13 @@ function BankCard({
   return (
     <div
       onClick={onClick}
-      className={`rounded-[14px] border-2 bg-card p-4 cursor-pointer transition-colors ${
+      className={`rounded-[14px] border-2 bg-card px-4 py-3.5 cursor-pointer transition-colors ${
         isClosed
           ? "border-border opacity-60 hover:opacity-70"
           : "border-border hover:border-primary"
       }`}
     >
-      <div className="flex items-center justify-between mb-1.5">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <p className="text-base font-bold text-foreground">
             {bank.icon} {bank.name}
@@ -188,19 +188,8 @@ function BankCard({
             </span>
           )}
         </div>
-        <span className="text-[11px] text-muted-foreground">{isClosed ? "" : "›"}</span>
+        <span className="text-[14px] text-muted-foreground">{isClosed ? "" : "›"}</span>
       </div>
-      {profile?.greeting_preview && !loading && (
-        <p className="text-[12px] text-muted-foreground leading-snug line-clamp-2">
-          {profile.greeting_preview}
-        </p>
-      )}
-      {profile?.business_hours && !isClosed && (
-        <p className="text-[10px] text-muted-foreground mt-1">⏰ {profile.business_hours}</p>
-      )}
-      {isClosed && profile?.closing_message && (
-        <p className="text-[11px] text-red-600 mt-1">{profile.closing_message}</p>
-      )}
     </div>
   );
 }
