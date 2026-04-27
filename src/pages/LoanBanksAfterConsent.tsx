@@ -26,9 +26,9 @@ export default function LoanBanksAfterConsent() {
   const [banks, setBanks] = useState<BankDetail[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 동의서 미작성 시 카드 목록으로 돌려보냄
+  // 동의서 미작성 시 카드 목록으로 돌려보냄 (localStorage = 영구)
   useEffect(() => {
-    const consentId = sessionStorage.getItem("ipjuon_consent_id");
+    const consentId = localStorage.getItem("ipjuon_consent_id");
     if (!consentId) {
       toast.error("먼저 동의서 작성이 필요합니다");
       navigate("/loan/banks");

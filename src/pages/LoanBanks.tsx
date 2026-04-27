@@ -50,8 +50,9 @@ const LoanBanks = () => {
     }
   }, [location.hash]);
 
+  // 영구 저장된 동의 여부 (localStorage). 한 번 동의하면 다음 방문에도 모달 안 뜸.
   const hasConsent = () => {
-    try { return !!sessionStorage.getItem("ipjuon_consent_id"); } catch { return false; }
+    try { return !!localStorage.getItem("ipjuon_consent_id"); } catch { return false; }
   };
 
   const handleBankClick = (bankName: string) => {
@@ -61,18 +62,23 @@ const LoanBanks = () => {
       return;
     }
     if (hasConsent()) {
-      // 이미 동의 → 상세 페이지로 직행
+      // 이미 동의 → 그 은행 상세 페이지로 직행
       navigate(`/loan/banks/${encodeURIComponent(bankName)}`);
     } else {
-      // 미동의 → 동의서 모달 띄움
+      // 미동의 → 동의서 모달 띄움 (제출 후 그 은행 상세 페이지로 이동)
       setConsentModalFor(bankName);
     }
   };
 
   const handleConsentSuccess = (_consentId: string, _count: number) => {
+    const target = consentModalFor;
     setConsentModalFor(null);
-    // 동의 성공 → 모든 은행 통합 화면으로 이동 (입주민이 모든 은행을 한눈에 비교)
-    setTimeout(() => navigate("/loan/banks-after"), 100);
+    // 동의 성공 후:
+    // - 은행 카드 클릭으로 트리거 → 그 은행 상세 페이지로 이동
+    // - 상단 박스 클릭으로 트리거(__intro__) → 카드 목록 그대로 (재동의 모달 안 뜸)
+    if (target && target !== "__intro__") {
+      setTimeout(() => navigate(`/loan/banks/${encodeURIComponent(target)}`), 100);
+    }
   };
 
   return (
@@ -88,16 +94,20 @@ const LoanBanks = () => {
         <button
           type="button"
           onClick={() => {
-            if (hasConsent()) navigate("/loan/banks-after");
-            else setConsentModalFor("__intro__");
+            // 박스 클릭: 미동의면 모달, 동의 완료면 안내 토스트만 (카드 직접 클릭 유도)
+            if (hasConsent()) {
+              toast.info("아래 은행 카드를 누르면 상세 정보를 볼 수 있습니다");
+            } else {
+              setConsentModalFor("__intro__");
+            }
           }}
           className="w-full text-left rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5 hover:bg-accent/15 transition-colors cursor-pointer"
         >
           <p className="text-[13px] text-foreground font-medium">🏠 {complexName} 참여 금융기관</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             {hasConsent()
-              ? "✓ 동의 완료 — 눌러서 모든 은행 정보 보기"
-              : "이 박스 또는 은행 카드를 누르면 동의서가 표시됩니다"}
+              ? "✓ 동의 완료 — 은행 카드를 눌러 상세 정보를 확인하세요"
+              : "은행 카드를 누르면 동의서 후 상세 정보가 표시됩니다"}
           </p>
         </button>
 

@@ -114,9 +114,10 @@ export function ConsentModal({ open, onClose, onSuccess, bankName }: ConsentModa
         terms_version: TERMS_VERSION,
         invite_id: info.inviteId,
       });
+      // 영구 저장 (localStorage) — 다음 방문 시 동의 모달 안 뜨게
       try {
-        sessionStorage.setItem("ipjuon_consent_id", result.consent_id);
-        sessionStorage.setItem("ipjuon_consent_at", String(Date.now()));
+        localStorage.setItem("ipjuon_consent_id", result.consent_id);
+        localStorage.setItem("ipjuon_consent_at", String(Date.now()));
       } catch { /* noop */ }
       toast.success(result.message);
       onSuccess(result.consent_id, result.distributed_count);
