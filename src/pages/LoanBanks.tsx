@@ -70,12 +70,9 @@ const LoanBanks = () => {
   };
 
   const handleConsentSuccess = (_consentId: string, _count: number) => {
-    const target = consentModalFor;
     setConsentModalFor(null);
-    // 동의 성공 → 클릭한 은행 상세 페이지로 이동
-    if (target) {
-      setTimeout(() => navigate(`/loan/banks/${encodeURIComponent(target)}`), 100);
-    }
+    // 동의 성공 → 모든 은행 통합 화면으로 이동 (입주민이 모든 은행을 한눈에 비교)
+    setTimeout(() => navigate("/loan/banks-after"), 100);
   };
 
   return (
@@ -88,14 +85,21 @@ const LoanBanks = () => {
       </header>
 
       <div className="px-4 py-5 space-y-5 pb-24">
-        <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => {
+            if (hasConsent()) navigate("/loan/banks-after");
+            else setConsentModalFor("__intro__");
+          }}
+          className="w-full text-left rounded-lg bg-accent/10 border border-accent/20 px-3 py-2.5 hover:bg-accent/15 transition-colors cursor-pointer"
+        >
           <p className="text-[13px] text-foreground font-medium">🏠 {complexName} 참여 금융기관</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
             {hasConsent()
-              ? "✓ 동의 완료 — 카드를 누르면 상세 정보를 볼 수 있습니다"
-              : "은행 카드를 누르면 동의서 후 상세 정보 / 상담 안내가 시작됩니다"}
+              ? "✓ 동의 완료 — 눌러서 모든 은행 정보 보기"
+              : "이 박스 또는 은행 카드를 누르면 동의서가 표시됩니다"}
           </p>
-        </div>
+        </button>
 
         {banks1.length > 0 && (
           <div id="1금융">
@@ -138,7 +142,7 @@ const LoanBanks = () => {
         open={!!consentModalFor}
         onClose={() => setConsentModalFor(null)}
         onSuccess={handleConsentSuccess}
-        bankName={consentModalFor ?? undefined}
+        bankName={consentModalFor && consentModalFor !== "__intro__" ? consentModalFor : undefined}
       />
     </div>
   );
