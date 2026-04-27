@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X, FileText, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
@@ -34,11 +33,53 @@ const TERMS_TEXT = `[개인정보 수집·이용 및 제3자 제공 동의서]
   - 본 동의를 거부하실 수 있으며, 거부 시 은행 상세 정보 열람 및
     상담 신청이 제한됩니다.`;
 
+// 입주민 정보 자동 추출 (회원가입/계약 입력 시 저장된 정보 + invite_id fallback)
+async function resolveResidentInfo(): Promise<{ name: string; phone: string; complex: string; dong: string; ho: string; aptType: string; inviteId?: string } | null> {
+  let aptInfo: any = {};
+  let contract: any = null;
+  let userPhone = "";
+  let userName = "";
+  try { aptInfo = JSON.parse(localStorage.getItem("apartment_info") || "{}"); } catch {}
+  try { contract = JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch {}
+  try { userPhone = localStorage.getItem("user_phone") || ""; } catch {}
+  try { userName = localStorage.getItem("user_name") || ""; } catch {}
+
+  let inviteId: string | undefined;
+  try { inviteId = new URLSearchParams(window.location.search).get("invite") ?? undefined; } catch {}
+
+  // invite_id 가 있으면 백엔드에서 phone/complex 자동 조회
+  let invitePhone = "";
+  let inviteComplex = "";
+  if (inviteId) {
+    try {
+      const res = await fetch(`${(import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://banking-coroner-grader.ngrok-free.dev/api"}/invite/${inviteId}`, {
+        headers: { "ngrok-skip-browser-warning": "true" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        invitePhone = data?.phone || "";
+        inviteComplex = data?.complexName || "";
+      }
+    } catch {
+      // 무시 — fallback
+    }
+  }
+
+  const phone = userPhone || invitePhone;
+  if (!phone) return null;
+
+  return {
+    name: userName || "(미상)",
+    phone,
+    complex: aptInfo?.apt_name || contract?.complex || inviteComplex || "",
+    dong: aptInfo?.dong || contract?.dong || "",
+    ho: aptInfo?.ho || aptInfo?.unit_number || contract?.ho || "",
+    aptType: aptInfo?.apt_type || contract?.aptType || "",
+    inviteId,
+  };
+}
+
 export function ConsentModal({ open, onClose, onSuccess, bankName }: ConsentModalProps) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState(() => {
-    try { return localStorage.getItem("user_phone") || ""; } catch { return ""; }
-  });
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -51,37 +92,31 @@ export function ConsentModal({ open, onClose, onSuccess, bankName }: ConsentModa
 
   if (!open) return null;
 
-  const valid = name.trim().length > 0 && phone.trim().length > 0 && agreed;
-
-  const aptInfo = (() => {
-    try { return JSON.parse(localStorage.getItem("apartment_info") || "{}"); } catch { return {}; }
-  })();
-  const contract = (() => {
-    try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
-  })();
-  const inviteId = (() => {
-    try { return new URLSearchParams(window.location.search).get("invite") ?? undefined; } catch { return undefined; }
-  })();
-
   const handleSubmit = async () => {
-    if (!valid || submitting) return;
+    if (!agreed || submitting) return;
     setSubmitting(true);
     try {
+      const info = await resolveResidentInfo();
+      if (!info) {
+        toast.error("연락처 정보가 없습니다", {
+          description: "초대 링크를 통해 접속하시거나 회원 정보를 먼저 등록해 주세요.",
+        });
+        setSubmitting(false);
+        return;
+      }
       const result = await api.submitConsent({
-        resident_name: name.trim(),
-        resident_phone: phone.trim(),
-        resident_complex: aptInfo?.apt_name || contract?.complex || "",
-        dong: aptInfo?.dong || "",
-        ho: aptInfo?.ho || aptInfo?.unit_number || "",
-        apt_type: aptInfo?.apt_type || "",
+        resident_name: info.name,
+        resident_phone: info.phone,
+        resident_complex: info.complex,
+        dong: info.dong,
+        ho: info.ho,
+        apt_type: info.aptType,
         terms_version: TERMS_VERSION,
-        invite_id: inviteId,
+        invite_id: info.inviteId,
       });
-      // 동의서 ID/시각을 sessionStorage에 저장 → 다른 카드 클릭 시 모달 안 띄움
       try {
         sessionStorage.setItem("ipjuon_consent_id", result.consent_id);
         sessionStorage.setItem("ipjuon_consent_at", String(Date.now()));
-        localStorage.setItem("user_phone", phone.trim());
       } catch { /* noop */ }
       toast.success(result.message);
       onSuccess(result.consent_id, result.distributed_count);
@@ -109,11 +144,11 @@ export function ConsentModal({ open, onClose, onSuccess, bankName }: ConsentModa
           동의 시 협약 은행에서 직접 연락 드립니다.
         </p>
 
-        <div className="bg-muted/40 border border-border rounded-lg p-3 max-h-44 overflow-y-auto mb-4">
+        <div className="bg-muted/40 border border-border rounded-lg p-3 max-h-56 overflow-y-auto mb-4">
           <pre className="text-[11px] whitespace-pre-wrap text-foreground font-sans leading-relaxed">{TERMS_TEXT}</pre>
         </div>
 
-        <label className="flex items-start gap-2.5 cursor-pointer mb-4 select-none">
+        <label className="flex items-start gap-2.5 cursor-pointer mb-5 select-none">
           <input
             type="checkbox"
             checked={agreed}
@@ -122,31 +157,13 @@ export function ConsentModal({ open, onClose, onSuccess, bankName }: ConsentModa
           />
           <span className="text-[13px] text-foreground">
             <span className="font-bold">위 내용에 모두 동의합니다.</span>
-            {" "}동의 시 입력하신 연락처가 협약 은행에 즉시 전달됩니다.
+            {" "}동의 시 등록된 연락처가 협약 은행에 즉시 전달됩니다.
           </span>
         </label>
 
-        <div className="space-y-3 mb-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">성명 *</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="홍길동" className="h-11" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">연락처 *</label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="010-0000-0000" inputMode="tel" className="h-11" />
-          </div>
-          {(aptInfo?.apt_name || contract?.complex) && (
-            <p className="text-[11px] text-muted-foreground">
-              · 단지: {aptInfo?.apt_name || contract?.complex}
-              {aptInfo?.dong && ` / ${aptInfo.dong}동`}
-              {(aptInfo?.ho || aptInfo?.unit_number) && ` / ${aptInfo?.ho || aptInfo?.unit_number}호`}
-            </p>
-          )}
-        </div>
-
         <Button
           onClick={handleSubmit}
-          disabled={!valid || submitting}
+          disabled={!agreed || submitting}
           className="w-full h-12 text-base font-semibold"
         >
           {submitting ? (
