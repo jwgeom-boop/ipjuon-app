@@ -108,9 +108,8 @@ const LoanCalcDiagnosis = () => {
     try { return JSON.parse(localStorage.getItem("ipjuon_contract") || "null"); } catch { return null; }
   }, []);
 
-  // Step 1
+  // Step 1 — 주택 시가 단일 입력 (잔금대출 LTV 산정 기준은 시세)
   const [priceRaw, setPriceRaw] = useState(contract?.price ? fmtNum(String(contract.price)) : "");
-  const [appraisalRaw, setAppraisalRaw] = useState("");
   const [location, setLocation] = useState<"metro" | "local" | null>(null);
   const [regulated, setRegulated] = useState<boolean | null>(null);
 
@@ -135,8 +134,7 @@ const LoanCalcDiagnosis = () => {
 
   // Derived
   const price = parseNum(priceRaw);
-  const appraisal = parseNum(appraisalRaw);
-  const basePrice = appraisal > 0 ? appraisal : price;
+  const basePrice = price; // 단일 시가 입력
   const income = parseNum(incomeRaw);
   const recognizedIncome = income;
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
@@ -259,13 +257,13 @@ const LoanCalcDiagnosis = () => {
               <p className="text-xs text-muted-foreground mt-1">LTV 한도 계산의 기준이 됩니다</p>
             </div>
 
-            <Field label="분양가 (필수)">
-              <Input value={priceRaw} onChange={e => setPriceRaw(fmtNum(e.target.value))} placeholder="만원 단위 입력" className="h-11" inputMode="numeric" />
+            <Field label="주택 시가 (필수)">
+              <Input value={priceRaw} onChange={e => setPriceRaw(fmtNum(e.target.value))} placeholder="만원 단위 입력 (예: 50000 = 5억)" className="h-11" inputMode="numeric" />
               {price > 0 && <p className="text-xs text-accent mt-1 font-medium">💡 약 {toEok(price)}</p>}
-            </Field>
-
-            <Field label="감정가 (선택)">
-              <Input value={appraisalRaw} onChange={e => setAppraisalRaw(fmtNum(e.target.value))} placeholder="없으면 비워두세요" className="h-11" inputMode="numeric" />
+              <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                ※ 잔금대출은 <strong>시세 기준</strong>(한국부동산원·KB부동산 일반평균가)으로 한도 산정.<br />
+                시세 모르면 분양가로 입력해도 됩니다.
+              </p>
             </Field>
 
             <Field label="아파트 위치">
@@ -290,14 +288,55 @@ const LoanCalcDiagnosis = () => {
                   sub="그 외 모든 지역"
                 />
               </div>
-              <div className="mt-2 px-3 py-2 rounded-md bg-muted/50 border border-border text-[11px] text-muted-foreground leading-relaxed">
-                <p className="font-semibold text-foreground mb-1">📍 규제지역 (투기과열·조정·토지거래허가 삼중규제)</p>
-                <p>
-                  · <span className="text-foreground font-medium">서울 25개구 전역</span><br />
-                  · <span className="text-foreground font-medium">경기 12개 지역</span>: 과천, 광명, 수원(영통·장안·팔달), 성남(분당·수정·중원), 안양 동안, 용인 수지, 의왕, 하남<br />
-                  그 외는 모두 비규제지역.
-                </p>
-                <p className="mt-1 text-[10px]">기준일 2026.04.28 · 2025.10.16 시행</p>
+
+              {/* 규제지역 안내 박스 — 정돈된 디자인 */}
+              <div className="mt-3 rounded-lg bg-muted/40 border border-border overflow-hidden">
+                <div className="px-4 py-3 bg-muted/60 border-b border-border">
+                  <p className="text-sm font-bold text-foreground">📍 규제지역 안내</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">투기과열 · 조정 · 토지거래허가 삼중규제</p>
+                </div>
+
+                <div className="px-4 py-4 space-y-4">
+                  {/* 서울 */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl shrink-0">🏙️</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-foreground">서울 25개구 전역</p>
+                      <p className="text-[12px] text-muted-foreground mt-0.5">강남·강북 모든 구 포함</p>
+                    </div>
+                  </div>
+
+                  {/* 경기 */}
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl shrink-0">🏘️</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-foreground mb-2">경기 12개 지역</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          "과천", "광명",
+                          "수원 (영통·장안·팔달)",
+                          "성남 (분당·수정·중원)",
+                          "안양 동안", "용인 수지",
+                          "의왕", "하남",
+                        ].map(name => (
+                          <span
+                            key={name}
+                            className="text-[12px] bg-card border border-border rounded-md px-2 py-1 text-foreground"
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-4 py-2.5 bg-card border-t border-border">
+                  <p className="text-[12px] text-foreground">
+                    <span className="font-medium">위 지역 외</span>는 모두 <span className="font-bold text-primary">비규제지역</span>
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">기준일 2026.04.28 · 2025.10.16 시행</p>
+                </div>
               </div>
             </Field>
           </>
@@ -401,7 +440,7 @@ const LoanCalcDiagnosis = () => {
                 <p className="text-sm font-bold">적용 LTV 한도: {ltvPct}%</p>
                 {basePrice > 0 && (
                   <p className="text-xs mt-1 opacity-80">
-                    {appraisal > 0 ? "감정가" : "분양가"} {toEok(basePrice)} 기준 최대 {toEok(ltvLimit)}
+                    시가 {toEok(basePrice)} 기준 최대 {toEok(ltvLimit)}
                   </p>
                 )}
               </div>
