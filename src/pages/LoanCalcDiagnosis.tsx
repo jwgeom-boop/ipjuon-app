@@ -14,7 +14,7 @@ const toEok = (m: number) => {
   return `${m.toLocaleString()}만원`;
 };
 
-const STEP_LABELS = ["아파트 정보", "주택 조건", "소득 정보", "부채·신용", "대출 조건"];
+const STEP_LABELS = ["아파트 정보", "주택 조건", "소득·부채", "대출 조건"];
 
 /* ── LTV Table (2025.10.16 시행 / 10.15 주택시장 안정화 대책)
    ┌──────────────────────────┬────────┬─────────┬─────────┐
@@ -192,17 +192,16 @@ const LoanCalcDiagnosis = () => {
 
   const verdict = isRejected ? "rejected" : isConditional ? "conditional" : "approved";
 
-  // Step validation
+  // Step validation (4단계 통합 — Step 3 = 소득·부채 통합, Step 4 = 대출 조건, Step 5 = 결과)
   const step1Valid = price > 0 && location !== null && regulated !== null;
   const step2Valid = firstTime !== null && housingCount !== null;
-  const step3Valid = income > 0;
-  const step4Valid = hasExistingLoan !== null && financialSector !== null;
-  const step5Valid = inputRate > 0;
+  const step3Valid = income > 0 && hasExistingLoan !== null && financialSector !== null;
+  const step4Valid = inputRate > 0;
 
-  const canNext = [false, step1Valid, step2Valid, step3Valid, step4Valid, step5Valid][step];
-  const progress = step <= 5 ? step * 20 : 100;
+  const canNext = [false, step1Valid, step2Valid, step3Valid, step4Valid][step];
+  const progress = step <= 4 ? step * 25 : 100;
 
-  const goNext = () => { if (step < 6) setStep(step + 1); };
+  const goNext = () => { if (step < 5) setStep(step + 1); };
   const goPrev = () => { if (step > 1) setStep(step - 1); };
 
   const handleRestart = () => setStep(1);
@@ -233,10 +232,10 @@ const LoanCalcDiagnosis = () => {
           </div>
           <span className="text-[11px] px-2.5 py-1 rounded-full bg-accent text-accent-foreground font-semibold">무료 진단</span>
         </div>
-        {step <= 5 && (
+        {step <= 4 && (
           <div className="px-4 pb-3 space-y-1.5">
             <p className="text-[12px] text-muted-foreground">
-              STEP {step} · {STEP_LABELS[step - 1]}  <span className="ml-1 font-semibold">{step} / 5</span>
+              STEP {step} · {STEP_LABELS[step - 1]}  <span className="ml-1 font-semibold">{step} / 4</span>
             </p>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
               <div
@@ -448,11 +447,12 @@ const LoanCalcDiagnosis = () => {
           </>
         )}
 
-        {/* ════════ STEP 3 ════════ */}
+        {/* ════════ STEP 3 — 소득·부채 통합 (이전 Step 3 + Step 4) ════════ */}
         {step === 3 && (
           <>
             <div>
               <h2 className="text-base font-bold text-foreground">소득과 기존 대출을 입력해주세요</h2>
+              <p className="text-xs text-muted-foreground mt-1">DSR 계산의 핵심 항목입니다</p>
             </div>
 
             <Field label="연소득">
@@ -469,24 +469,9 @@ const LoanCalcDiagnosis = () => {
                 ))}
               </div>
               {income > 0 && (
-                <p className="text-xs text-primary font-medium mt-1">
-                  입력 연소득: {toEok(income)}
-                </p>
+                <p className="text-xs text-primary font-medium mt-1">입력 연소득: {toEok(income)}</p>
               )}
-              <p className="text-[11px] text-muted-foreground mt-1">
-                ※ 실제 대출 가능금액은 금융기관별, 소득유형별로 상이할 수 있습니다
-              </p>
             </Field>
-          </>
-        )}
-
-        {/* ════════ STEP 4 ════════ */}
-        {step === 4 && (
-          <>
-            <div>
-              <h2 className="text-base font-bold text-foreground">기존 대출 정보를 입력해주세요</h2>
-              <p className="text-xs text-muted-foreground mt-1">DSR 계산의 핵심 항목입니다</p>
-            </div>
 
             <Field label="기존 대출">
               <div className="grid grid-cols-2 gap-2">
@@ -509,30 +494,29 @@ const LoanCalcDiagnosis = () => {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setFinancialSector("first")}
-                  className={`p-4 rounded-lg border text-left transition-colors ${financialSector === "first" ? "bg-primary/10 border-primary" : "bg-card border-border"}`}
+                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "first" ? "bg-primary/10 border-primary" : "bg-card border-border"}`}
                 >
-                  <p className="text-sm font-semibold text-foreground">🏦 1금융권</p>
-                  <p className="text-lg font-bold text-primary mt-1">DSR 40%</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">시중은행·특수은행</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">KB·신한·하나·우리·농협 등</p>
+                  <p className="text-sm font-semibold text-foreground">🏦 1금융권 <span className="text-primary font-bold">· DSR 40%</span></p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">시중·특수은행 (KB·신한·하나·우리·농협)</p>
                 </button>
                 <button
                   onClick={() => setFinancialSector("second")}
-                  className={`p-4 rounded-lg border text-left transition-colors ${financialSector === "second" ? "bg-orange-100 border-orange-400" : "bg-card border-border"}`}
+                  className={`p-3 rounded-lg border text-left transition-colors ${financialSector === "second" ? "bg-orange-100 border-orange-400" : "bg-card border-border"}`}
                 >
-                  <p className="text-sm font-semibold text-foreground">🏢 2금융권</p>
-                  <p className="text-lg font-bold text-orange-600 mt-1">DSR 50%</p>
-                  <p className="text-[11px] text-muted-foreground mt-1">상호금융</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">새마을금고·지역농협·신협·산림조합 등</p>
+                  <p className="text-sm font-semibold text-foreground">🏢 2금융권 <span className="text-orange-600 font-bold">· DSR 50%</span></p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">상호금융 (새마을금고·농협·신협·산림조합)</p>
                 </button>
               </div>
             </Field>
 
+            <p className="text-[11px] text-muted-foreground -mt-2">
+              ※ 실제 대출 가능금액은 금융기관별·소득유형별로 상이할 수 있습니다
+            </p>
           </>
         )}
 
-        {/* ════════ STEP 5 ════════ */}
-        {step === 5 && (
+        {/* ════════ STEP 4 — 대출 조건 (이전 Step 5) ════════ */}
+        {step === 4 && (
           <>
             <div>
               <h2 className="text-base font-bold text-foreground">금리와 대출 기간을 입력해주세요</h2>
@@ -581,8 +565,8 @@ const LoanCalcDiagnosis = () => {
           </>
         )}
 
-        {/* ════════ RESULT ════════ */}
-        {step === 6 && (
+        {/* ════════ STEP 5 — RESULT (이전 Step 6) ════════ */}
+        {step === 5 && (
           <>
             {/* Verdict banner */}
             <div
@@ -710,8 +694,8 @@ const LoanCalcDiagnosis = () => {
         )}
       </div>
 
-      {/* Bottom nav (steps 1-5) */}
-      {step <= 5 && (
+      {/* Bottom nav (steps 1-4) */}
+      {step <= 4 && (
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-card border-t border-border px-4 py-3 flex gap-3">
           {step > 1 && (
             <Button variant="outline" className="flex-1 h-12 text-base" onClick={goPrev}>← 이전</Button>
@@ -719,10 +703,10 @@ const LoanCalcDiagnosis = () => {
           <Button
             className={`${step > 1 ? "flex-1" : "w-full"} h-12 text-base font-semibold`}
             disabled={!canNext}
-            onClick={step === 5 ? () => setStep(6) : goNext}
-            style={step === 5 ? { background: "linear-gradient(135deg, hsl(var(--accent)), #92400E)" } : undefined}
+            onClick={step === 4 ? () => setStep(5) : goNext}
+            style={step === 4 ? { background: "linear-gradient(135deg, hsl(var(--accent)), #92400E)" } : undefined}
           >
-            {step === 5 ? "심사 결과 보기 🏦" : `다음 → ${STEP_LABELS[step]}`}
+            {step === 4 ? "심사 결과 보기 🏦" : `다음 → ${STEP_LABELS[step]}`}
           </Button>
         </div>
       )}
