@@ -24,6 +24,12 @@ export interface MyConsultationItem {
   canceled_reason?: string | null
 }
 
+export interface SigningSlot {
+  date: string  // ISO date (YYYY-MM-DD)
+  time: string  // HH:mm
+  location: string
+}
+
 export interface MyConsultationDetail extends MyConsultationItem {
   complex_name?: string | null
   dong?: string | null
@@ -32,6 +38,11 @@ export interface MyConsultationDetail extends MyConsultationItem {
   approved_notified_at?: string | null
   customer_accepted_at?: string | null
   signing_time?: string | null
+  signing_location?: string | null
+  signing_offered_slots?: string | null  // JSON string
+  signing_selected_slot_index?: number | null
+  signing_selected_at?: string | null
+  signing_confirmed_at?: string | null
   loan_amount?: number | null
   loan_period?: string | null
   repayment_method?: string | null
@@ -198,6 +209,20 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.error || '수용 처리 실패')
+    }
+    return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // 자서 슬롯 선택 — 상담사가 제시한 슬롯 중 하나 선택
+  selectSigningSlot: async (id: string, phone: string, slotIndex: number) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/select-signing-slot`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone, slot_index: slotIndex }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '슬롯 선택 실패')
     }
     return res.json() as Promise<MyConsultationDetail>
   },

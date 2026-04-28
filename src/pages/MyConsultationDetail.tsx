@@ -9,6 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import SigningSlotCard from "@/components/SigningSlotCard";
 
 const STAGES: Array<{ key: MyConsultationStage; label: string; emoji: string }> = [
   { key: "apply",      label: "신청 접수",      emoji: "📥" },
@@ -284,6 +285,16 @@ const MyConsultationDetail = () => {
               <p className="text-[11px] text-muted-foreground mt-2">통보일 {formatDate(display.approved_notified_at)}</p>
             )}
           </Card>
+        )}
+
+        {/* 자서 일정 슬롯 — 가심사 결과부터 노출 (확정 전까지) */}
+        {(display.stage === "result" || display.stage === "executing") && (
+          <SigningSlotCard
+            data={display}
+            phone={phone}
+            onUpdated={(updated) => setData(updated)}
+            readOnly={isPreview}
+          />
         )}
 
         {/* 일정 카드 */}
