@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import SigningSlotCard from "@/components/SigningSlotCard";
+import ResidentDocChecklist from "@/components/ResidentDocChecklist";
 
 const STAGES: Array<{ key: MyConsultationStage; label: string; emoji: string }> = [
   { key: "apply",      label: "신청 접수",      emoji: "📥" },
@@ -290,6 +291,16 @@ const MyConsultationDetail = () => {
         {/* 자서 일정 슬롯 — 가심사 결과부터 노출 (확정 전까지) */}
         {(display.stage === "result" || display.stage === "executing") && (
           <SigningSlotCard
+            data={display}
+            phone={phone}
+            onUpdated={(updated) => setData(updated)}
+            readOnly={isPreview}
+          />
+        )}
+
+        {/* 준비서류 체크리스트 — 가심사 결과~자서·실행 단계 (사전 준비 + 진행 추적) */}
+        {(display.stage === "result" || display.stage === "executing" || display.stage === "done") && (
+          <ResidentDocChecklist
             data={display}
             phone={phone}
             onUpdated={(updated) => setData(updated)}

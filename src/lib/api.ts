@@ -31,6 +31,8 @@ export interface SigningSlot {
 }
 
 export interface MyConsultationDetail extends MyConsultationItem {
+  resident_doc_checks?: string | null  // 쉼표 구분 doc id
+  resident_doc_checks_at?: string | null
   complex_name?: string | null
   dong?: string | null
   ho?: string | null
@@ -247,6 +249,20 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.error || '슬롯 선택 실패')
+    }
+    return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // 입주민 준비서류 체크리스트 업데이트 (체크된 doc id 배열 전송)
+  updateDocChecks: async (id: string, phone: string, checks: string[]) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/document-checks`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone, checks }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '체크 업데이트 실패')
     }
     return res.json() as Promise<MyConsultationDetail>
   },
