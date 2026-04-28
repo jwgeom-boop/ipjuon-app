@@ -155,6 +155,44 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+const STAGE_FLOW: Array<MyConsultationStage> = ["apply", "consulting", "result", "executing", "done"];
+const STAGE_FLOW_LABEL: Record<MyConsultationStage, string> = {
+  apply: "신청",
+  consulting: "상담",
+  result: "가심사",
+  executing: "자서·실행",
+  done: "완료",
+  cancel: "취소",
+};
+
+function MiniTimeline({ stage }: { stage: MyConsultationStage }) {
+  if (stage === "cancel") return null;
+  const currentIdx = STAGE_FLOW.indexOf(stage);
+  return (
+    <div className="flex items-center gap-1 mt-2">
+      {STAGE_FLOW.map((s, i) => {
+        const reached = i <= currentIdx;
+        const current = i === currentIdx;
+        return (
+          <div key={s} className="flex items-center flex-1">
+            <div
+              className={`h-1.5 flex-1 rounded-full transition-colors ${
+                reached ? "bg-primary" : "bg-muted"
+              }`}
+              title={STAGE_FLOW_LABEL[s]}
+            />
+            {current && (
+              <span className="ml-1 text-[10px] font-bold text-primary whitespace-nowrap">
+                {STAGE_FLOW_LABEL[s]}
+              </span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ConsultationCard({ item, onClick, compact }: { item: MyConsultationItem; onClick: () => void; compact?: boolean }) {
   const style = STAGE_STYLE[item.stage];
   return (
@@ -173,6 +211,7 @@ function ConsultationCard({ item, onClick, compact }: { item: MyConsultationItem
         </span>
       </div>
 
+      {!compact && <MiniTimeline stage={item.stage} />}
       {!compact && <CardBody item={item} />}
       {compact && (
         <div className="mt-2 flex items-center justify-between text-[12px] text-muted-foreground">
