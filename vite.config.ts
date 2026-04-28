@@ -19,7 +19,10 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["icon-192.png", "icon-512.png"],
+      includeAssets: ["icon-192.png", "icon-512.png", "push-handler.js"],
+      workbox: {
+        importScripts: ["/push-handler.js"],
+      },
       manifest: {
         name: "입주ON",
         short_name: "입주ON",

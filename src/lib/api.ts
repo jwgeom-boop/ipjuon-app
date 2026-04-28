@@ -155,6 +155,28 @@ export const api = {
     return res.json() as Promise<MyConsultationDetail>
   },
 
+  // Web Push 구독 등록
+  registerPushSubscription: async (data: { phone: string; endpoint: string; p256dh: string; auth: string }) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/push-subscriptions`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('푸시 구독 등록 실패')
+    return res.json()
+  },
+
+  // Web Push 구독 해제
+  unregisterPushSubscription: async (data: { endpoint: string }) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/push-subscriptions`, {
+      method: 'DELETE',
+      headers: HEADERS,
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) throw new Error('푸시 구독 해제 실패')
+    return res.json()
+  },
+
   // 가심사 결과 수용 (result 단계에서만 가능)
   acceptConsultation: async (id: string, phone: string) => {
     const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/accept`, {

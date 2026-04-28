@@ -4,6 +4,7 @@ import { ArrowLeft, Bell, ChevronRight, RefreshCw } from "lucide-react";
 import { api, MyConsultationItem, MyConsultationStage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import BottomTabBar from "@/components/BottomTabBar";
+import PushOptInBanner from "@/components/PushOptInBanner";
 import { toast } from "sonner";
 
 const toEok = (won?: number | null) => {
@@ -98,6 +99,8 @@ const MyConsultations = () => {
       </div>
 
       <div className="px-4 py-4 space-y-5">
+        {!loading && items.length > 0 && <PushOptInBanner />}
+
         {loading && items.length === 0 && (
           <div className="text-center py-16 text-sm text-muted-foreground">불러오는 중...</div>
         )}
