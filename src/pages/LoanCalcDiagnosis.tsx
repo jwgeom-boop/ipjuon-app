@@ -222,7 +222,7 @@ const LoanCalcDiagnosis = () => {
             <button onClick={() => step > 1 ? goPrev() : navigate(-1)} className="p-1">
               <ArrowLeft className="w-5 h-5 text-foreground" />
             </button>
-            <h1 className="text-base font-bold text-foreground">🏦 잔금대출 사전 자가진단</h1>
+            <h1 className="text-base font-bold text-foreground">🏦 잔금대출 사전 자가진단(참고용)</h1>
           </div>
           <span className="text-[11px] px-2.5 py-1 rounded-full bg-accent text-accent-foreground font-semibold">무료 진단</span>
         </div>
@@ -559,7 +559,7 @@ const LoanCalcDiagnosis = () => {
           <>
             {/* Verdict banner */}
             <div
-              className="rounded-[18px] px-5 py-6 text-white"
+              className="rounded-[14px] px-4 py-3 text-white"
               style={{
                 background: verdict === "approved"
                   ? "linear-gradient(135deg, #059669, #065F46)"
@@ -568,26 +568,28 @@ const LoanCalcDiagnosis = () => {
                   : "linear-gradient(135deg, #DC2626, #991B1B)"
               }}
             >
-              <p className="text-xs opacity-80">잔금대출 사전 자가진단 결과</p>
-              <p className="text-2xl font-extrabold mt-1">
-                {verdict === "approved" && "✅ 승인 예상"}
-                {verdict === "conditional" && "⚠️ 조건부 승인"}
-                {verdict === "rejected" && "❌ 대출 불가"}
-              </p>
+              <p className="text-[11px] opacity-80">잔금대출 사전 자가진단 결과 (참고용)</p>
               {!isRejected ? (
                 <>
-                  <p className="text-[32px] font-extrabold mt-2">{toEok(appliedLimit)}</p>
-                  <div className="mt-3 pt-3 border-t border-white/20 space-y-1 text-sm">
-                    <div className="flex justify-between"><span className="opacity-70">LTV 한도</span><span>{toEok(ltvLimit)}</span></div>
-                    <div className="flex justify-between"><span className="opacity-70">DSR 한도</span><span>{`DSR ${Math.round(dsrPct * 100)}% (${financialSector === "first" ? "1금융" : "상호금융"} 기준)`}</span></div>
+                  <div className="flex items-baseline justify-between mt-0.5 gap-2">
+                    <p className="text-base font-extrabold whitespace-nowrap">
+                      {verdict === "approved" && "✅ 승인 예상"}
+                      {verdict === "conditional" && "⚠️ 조건부 승인"}
+                    </p>
+                    <p className="text-2xl font-extrabold">{toEok(appliedLimit)}</p>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-white/20 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[12px]">
+                    <div className="flex justify-between"><span className="opacity-70">LTV</span><span>{toEok(ltvLimit)}</span></div>
                     <div className="flex justify-between"><span className="opacity-70">DSR 최대</span><span>{toEok(dsrLimit)}</span></div>
-                    <div className="flex justify-between font-bold"><span>적용 한도</span><span>{toEok(appliedLimit)}</span></div>
-                    <div className="flex justify-between"><span className="opacity-70">월 상환액</span><span>{monthly.toLocaleString()}만원</span></div>
+                    <div className="flex justify-between"><span className="opacity-70">월 상환</span><span>{monthly.toLocaleString()}만</span></div>
                     <div className="flex justify-between"><span className="opacity-70">총 이자</span><span>{toEok(Math.max(0, totalInterest))}</span></div>
                   </div>
                 </>
               ) : (
-                <p className="text-sm mt-2 opacity-90">대출 심사 통과 어려움</p>
+                <>
+                  <p className="text-xl font-extrabold mt-0.5">❌ 대출 불가</p>
+                  <p className="text-xs mt-1 opacity-90">대출 심사 통과 어려움</p>
+                </>
               )}
             </div>
 
