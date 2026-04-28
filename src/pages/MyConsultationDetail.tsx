@@ -18,6 +18,67 @@ const STAGES: Array<{ key: MyConsultationStage; label: string; emoji: string }> 
   { key: "done",       label: "완료",          emoji: "✅" },
 ];
 
+const STAGE_LABEL_MAP: Record<MyConsultationStage, string> = {
+  apply: "신청 접수",
+  consulting: "상담·심사 중",
+  result: "가심사 결과",
+  executing: "자서·실행 진행",
+  done: "완료",
+  cancel: "취소",
+};
+
+/**
+ * 미리보기 데이터 합성 — 실제 데이터에 해당 단계의 가상 데이터를 채워넣어
+ * 빈 화면 없이 단계별 UI를 시연 가능하게 함.
+ */
+function buildPreview(real: DetailType, target: MyConsultationStage): DetailType {
+  const base: DetailType = { ...real, stage: target, stage_label: STAGE_LABEL_MAP[target] };
+  const ymd = (offsetDays: number) => {
+    const d = new Date(); d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().slice(0, 10);
+  };
+
+  if (target === "consulting") {
+    base.manager_name = base.manager_name ?? "김주임";
+    base.bank_branch = base.bank_branch ?? `${base.bank_name} 부전동`;
+  }
+  if (target === "result" || target === "executing" || target === "done") {
+    base.approved_amount = base.approved_amount ?? 350_000_000;
+    base.approved_rate = base.approved_rate ?? "4.20%";
+    base.approved_notified_at = base.approved_notified_at ?? new Date().toISOString();
+    base.manager_name = base.manager_name ?? "김주임";
+    base.bank_branch = base.bank_branch ?? `${base.bank_name} 부전동`;
+    base.bank_manager_phone = base.bank_manager_phone ?? "051-811-5131";
+  }
+  if (target === "executing" || target === "done") {
+    base.signing_date = base.signing_date ?? ymd(target === "done" ? -7 : 5);
+    base.signing_time = base.signing_time ?? "10:00";
+    base.execution_date = base.execution_date ?? ymd(target === "done" ? -3 : 7);
+    base.loan_amount = base.loan_amount ?? 300_000_000;
+    base.loan_period = base.loan_period ?? "30년";
+    base.repayment_method = base.repayment_method ?? "원리금균등";
+    base.product = base.product ?? "고정";
+    base.settlement = base.settlement ?? {
+      middle_principal: 120_000_000,
+      middle_bank: "국민은행",
+      middle_account: "수표상환",
+      balance_principal: 165_000_000,
+      balance_account: "101437-04-002570",
+      balcony: 9_000_000,
+      mgmt_fee: 350_000,
+      mgmt_account: "356-1102-3344-55 (관리사무소)",
+      stamp_duty: 150_000,
+    };
+  }
+  if (target === "done") {
+    base.settlement = {
+      ...(base.settlement || {}),
+      middle_interest: base.settlement?.middle_interest ?? 165_601,
+    };
+  }
+  return base;
+}
+
 const toEok = (won?: number | null) => {
   if (!won || won <= 0) return "-";
   const eok = Math.floor(won / 100000000);
@@ -56,6 +117,8 @@ const MyConsultationDetail = () => {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [actionBusy, setActionBusy] = useState(false);
+  // 단계별 미리보기 — 타임라인 클릭 시 다른 단계 화면 시뮬레이션
+  const [previewStage, setPreviewStage] = useState<MyConsultationStage | null>(null);
 
   const doAccept = async () => {
     if (!id || !phone) return;
@@ -121,9 +184,13 @@ const MyConsultationDetail = () => {
   if (error) return <ErrorView message={error} onBack={() => navigate(-1)} />;
   if (!data) return null;
 
-  const currentStageIndex = data.stage === "cancel"
+  // 미리보기 모드: 가상 데이터 합성. 실제 단계 ≠ 보고 있는 단계일 때만 활성.
+  const isPreview = previewStage !== null && previewStage !== data.stage;
+  const display: DetailType = isPreview ? buildPreview(data, previewStage!) : data;
+
+  const currentStageIndex = display.stage === "cancel"
     ? -1
-    : STAGES.findIndex(s => s.key === data.stage);
+    : STAGES.findIndex(s => s.key === display.stage);
 
   return (
     <div className="app-shell min-h-screen bg-background pb-10">
@@ -140,26 +207,46 @@ const MyConsultationDetail = () => {
       </div>
 
       <div className="px-4 py-4 space-y-4">
-        {/* Stage timeline */}
-        {data.stage !== "cancel" ? (
+        {/* 미리보기 모드 배너 */}
+        {isPreview && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 flex items-center justify-between gap-2">
+            <p className="text-[12px] text-amber-900">
+              👁 <span className="font-bold">미리보기</span> · 실제 단계: <span className="font-bold">{data.stage_label}</span>
+            </p>
+            <button
+              onClick={() => setPreviewStage(null)}
+              className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-200/70 text-amber-900 hover:bg-amber-200"
+            >
+              현재로
+            </button>
+          </div>
+        )}
+
+        {/* Stage timeline — 클릭 가능 */}
+        {display.stage !== "cancel" ? (
           <div className="bg-card border border-border rounded-xl p-4">
+            <p className="text-[10px] text-muted-foreground text-center mb-2">단계를 탭하면 해당 화면을 미리볼 수 있습니다</p>
             <div className="flex items-center justify-between">
               {STAGES.map((s, i) => {
                 const reached = i <= currentStageIndex;
                 const current = i === currentStageIndex;
                 return (
-                  <div key={s.key} className="flex flex-col items-center flex-1 min-w-0">
+                  <button
+                    key={s.key}
+                    onClick={() => setPreviewStage(s.key === data.stage ? null : s.key)}
+                    className="flex flex-col items-center flex-1 min-w-0 active:scale-95 transition-transform"
+                  >
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm transition-colors ${
                       current ? "bg-primary text-primary-foreground ring-4 ring-primary/15" :
                       reached ? "bg-primary/80 text-primary-foreground" :
-                      "bg-muted text-muted-foreground"
+                      "bg-muted text-muted-foreground hover:bg-muted/70"
                     }`}>
                       {s.emoji}
                     </div>
                     <p className={`text-[10px] mt-1.5 text-center leading-tight ${current ? "font-bold text-foreground" : reached ? "text-foreground" : "text-muted-foreground"}`}>
                       {s.label}
                     </p>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -167,50 +254,65 @@ const MyConsultationDetail = () => {
         ) : (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4">
             <p className="text-sm font-bold text-red-800">❌ 상담이 취소되었습니다</p>
-            {data.canceled_reason && <p className="text-[12px] text-red-700 mt-1">{data.canceled_reason}</p>}
+            {display.canceled_reason && <p className="text-[12px] text-red-700 mt-1">{display.canceled_reason}</p>}
           </div>
         )}
 
+        {/* 단계별 안내 — apply/consulting 미리보기 시 빈 화면 방지 */}
+        {(display.stage === "apply") && (
+          <Card title="📥 신청 접수 완료">
+            <p className="text-sm text-foreground">은행에서 곧 연락드립니다.</p>
+            <p className="text-[12px] text-muted-foreground mt-1">담당자 배정 후 상담·심사 단계로 자동 전환됩니다.</p>
+          </Card>
+        )}
+        {(display.stage === "consulting") && (
+          <Card title="💬 상담·심사 진행 중">
+            <p className="text-sm text-foreground">은행 담당자가 검토 중입니다.</p>
+            {display.manager_name && <p className="text-[12px] text-foreground mt-2">담당: <span className="font-medium">{display.manager_name}</span></p>}
+            <p className="text-[12px] text-muted-foreground mt-1">검토 완료 시 가심사 결과가 도착합니다.</p>
+          </Card>
+        )}
+
         {/* 가심사 결과 카드 (result 이상) */}
-        {(data.stage === "result" || data.stage === "executing" || data.stage === "done") && (data.approved_amount || data.approved_rate) && (
+        {(display.stage === "result" || display.stage === "executing" || display.stage === "done") && (display.approved_amount || display.approved_rate) && (
           <Card title="🎯 가심사 결과" accent="purple">
             <div className="grid grid-cols-2 gap-3">
-              <Info label="승인 금액" value={toEok(data.approved_amount)} large />
-              <Info label="금리" value={data.approved_rate || "-"} large />
+              <Info label="승인 금액" value={toEok(display.approved_amount)} large />
+              <Info label="금리" value={display.approved_rate || "-"} large />
             </div>
-            {data.approved_notified_at && (
-              <p className="text-[11px] text-muted-foreground mt-2">통보일 {formatDate(data.approved_notified_at)}</p>
+            {display.approved_notified_at && (
+              <p className="text-[11px] text-muted-foreground mt-2">통보일 {formatDate(display.approved_notified_at)}</p>
             )}
           </Card>
         )}
 
         {/* 일정 카드 */}
-        {(data.signing_date || data.execution_date || data.moving_in_date) && (
+        {(display.signing_date || display.execution_date || display.moving_in_date) && (
           <Card title="📅 일정">
             <div className="space-y-2">
-              {data.signing_date && (
-                <ScheduleRow label="자서일" date={data.signing_date} time={data.signing_time} dday={dDay(data.signing_date)} />
+              {display.signing_date && (
+                <ScheduleRow label="자서일" date={display.signing_date} time={display.signing_time} dday={dDay(display.signing_date)} />
               )}
-              {data.execution_date && (
-                <ScheduleRow label="실행일" date={data.execution_date} dday={dDay(data.execution_date)} />
+              {display.execution_date && (
+                <ScheduleRow label="실행일" date={display.execution_date} dday={dDay(display.execution_date)} />
               )}
-              {data.moving_in_date && (
-                <ScheduleRow label="입주일" date={data.moving_in_date} dday={dDay(data.moving_in_date)} />
+              {display.moving_in_date && (
+                <ScheduleRow label="입주일" date={display.moving_in_date} dday={dDay(display.moving_in_date)} />
               )}
             </div>
           </Card>
         )}
 
         {/* 담당자 카드 */}
-        {(data.manager_name || data.bank_branch || data.bank_manager_phone) && (
+        {(display.manager_name || display.bank_branch || display.bank_manager_phone) && (
           <Card title="👤 담당자">
             <div className="space-y-1.5">
-              {data.manager_name && <Info label="담당" value={data.manager_name} />}
-              {data.bank_branch && <Info label="지점" value={data.bank_branch} />}
-              {data.bank_manager_phone && (
-                <a href={`tel:${data.bank_manager_phone}`}
+              {display.manager_name && <Info label="담당" value={display.manager_name} />}
+              {display.bank_branch && <Info label="지점" value={display.bank_branch} />}
+              {display.bank_manager_phone && (
+                <a href={`tel:${display.bank_manager_phone}`}
                   className="flex items-center justify-between mt-2 px-3 py-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15 transition-colors">
-                  <span className="text-sm font-medium">📞 {data.bank_manager_phone}</span>
+                  <span className="text-sm font-medium">📞 {display.bank_manager_phone}</span>
                   <Phone className="w-4 h-4" />
                 </a>
               )}
@@ -219,27 +321,28 @@ const MyConsultationDetail = () => {
         )}
 
         {/* 대출 조건 */}
-        {(data.loan_amount || data.loan_period || data.product) && (
+        {(display.loan_amount || display.loan_period || display.product) && (
           <Card title="📋 대출 조건">
             <div className="space-y-1.5">
-              {data.loan_amount && <Info label="대출 금액" value={toEok(data.loan_amount)} />}
-              {data.loan_period && <Info label="대출 기간" value={data.loan_period} />}
-              {data.repayment_method && <Info label="상환 방식" value={data.repayment_method} />}
-              {data.product && <Info label="상품" value={data.product} />}
+              {display.loan_amount && <Info label="대출 금액" value={toEok(display.loan_amount)} />}
+              {display.loan_period && <Info label="대출 기간" value={display.loan_period} />}
+              {display.repayment_method && <Info label="상환 방식" value={display.repayment_method} />}
+              {display.product && <Info label="상품" value={display.product} />}
             </div>
           </Card>
         )}
 
         {/* 정산 (executing 이상) */}
-        {data.settlement && (data.stage === "executing" || data.stage === "done") && (
+        {display.settlement && (display.stage === "executing" || display.stage === "done") && (
           <Card title="💰 정산 내역 · 송금 정보">
             <SettlementTable
-              s={data.settlement}
-              consultationId={data.id}
+              s={display.settlement}
+              consultationId={display.id}
               phone={phone}
-              executionDate={data.execution_date}
-              stage={data.stage}
+              executionDate={display.execution_date}
+              stage={display.stage}
               onUpdated={(updated) => setData(updated)}
+              readOnly={isPreview}
             />
           </Card>
         )}
@@ -254,13 +357,15 @@ const MyConsultationDetail = () => {
           </div>
         </Card>
 
-        {/* 액션 버튼 */}
-        <ActionButtons
-          stage={data.stage}
-          accepted={!!data.customer_accepted_at}
-          onAccept={() => setAcceptOpen(true)}
-          onCancel={() => setCancelOpen(true)}
-        />
+        {/* 액션 버튼 — 미리보기 모드에서는 비활성 */}
+        {!isPreview && (
+          <ActionButtons
+            stage={data.stage}
+            accepted={!!data.customer_accepted_at}
+            onAccept={() => setAcceptOpen(true)}
+            onCancel={() => setCancelOpen(true)}
+          />
+        )}
 
         <p className="text-[11px] text-muted-foreground text-center pt-2">
           ※ 정보는 상담사가 입력한 시점 기준 · 변동 가능
@@ -393,13 +498,14 @@ interface SettleRow {
   reportable?: boolean;
 }
 
-function SettlementTable({ s, consultationId, phone, executionDate, stage, onUpdated }: {
+function SettlementTable({ s, consultationId, phone, executionDate, stage, onUpdated, readOnly }: {
   s: NonNullable<DetailType["settlement"]>;
   consultationId: string;
   phone: string;
   executionDate?: string | null;
   stage: MyConsultationStage;
   onUpdated: (d: DetailType) => void;
+  readOnly?: boolean;
 }) {
   const rows: SettleRow[] = [
     { label: "중도금 원금",   amount: s.middle_principal,    bank: s.middle_bank,   account: s.middle_account },
@@ -434,6 +540,7 @@ function SettlementTable({ s, consultationId, phone, executionDate, stage, onUpd
           executionDate={executionDate}
           stage={stage}
           onUpdated={onUpdated}
+          readOnly={readOnly}
         />
       ))}
       <div className="border-t-2 border-border pt-2 mt-2 flex justify-between items-center">
@@ -447,7 +554,7 @@ function SettlementTable({ s, consultationId, phone, executionDate, stage, onUpd
   );
 }
 
-function SettlementRow({ row, settlement, consultationId, phone, executionDate, stage, onUpdated }: {
+function SettlementRow({ row, settlement, consultationId, phone, executionDate, stage, onUpdated, readOnly }: {
   row: SettleRow;
   settlement: NonNullable<DetailType["settlement"]>;
   consultationId: string;
@@ -455,6 +562,7 @@ function SettlementRow({ row, settlement, consultationId, phone, executionDate, 
   executionDate?: string | null;
   stage: MyConsultationStage;
   onUpdated: (d: DetailType) => void;
+  readOnly?: boolean;
 }) {
   // 중도금이자 보고 가능 시점: executing + 실행일 D-1 ~ D+0 + 미확정
   const isMiddleInterestReport = row.reportable && row.label === "중도금 이자";
@@ -474,7 +582,7 @@ function SettlementRow({ row, settlement, consultationId, phone, executionDate, 
     return (
       <MiddleInterestReportRow
         settlement={settlement}
-        canReport={canReport}
+        canReport={canReport && !readOnly}
         consultationId={consultationId}
         phone={phone}
         onUpdated={onUpdated}
