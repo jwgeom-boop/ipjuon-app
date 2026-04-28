@@ -344,6 +344,15 @@ const MyConsultationDetail = () => {
               onUpdated={(updated) => setData(updated)}
               readOnly={isPreview}
             />
+            {!isPreview && (
+              <Button
+                variant="outline"
+                className="w-full mt-3 h-10 text-sm"
+                onClick={() => navigate(`/my/consultations/${data.id}/repayment`)}
+              >
+                📋 상환내역 자세히 보기 →
+              </Button>
+            )}
           </Card>
         )}
 
