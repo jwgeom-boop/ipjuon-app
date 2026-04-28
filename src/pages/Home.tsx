@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import BottomTabBar from "@/components/BottomTabBar";
+import HomeMyConsultationBanner from "@/components/HomeMyConsultationBanner";
 import { trackInviteEvent } from "@/lib/storageKeys";
 
 const STORAGE_KEY = "apartment_info";
@@ -231,7 +232,10 @@ export default function Home() {
         </div>
 
         {/* 상단 여백 */}
-        <div style={{ height: "15%" }} />
+        <div style={{ height: "10%" }} />
+
+        {/* 진행 중 상담 배너 (없으면 미표시) */}
+        <HomeMyConsultationBanner />
 
         {/* 카드 그리드 */}
         <div style={{ position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "0 12px" }}>

@@ -5,6 +5,54 @@ const HEADERS = {
   'ngrok-skip-browser-warning': 'true',
 }
 
+export type MyConsultationStage = 'apply' | 'consulting' | 'result' | 'executing' | 'done' | 'cancel'
+
+export interface MyConsultationItem {
+  id: string
+  bank_name: string
+  stage: MyConsultationStage
+  stage_label: string
+  loan_status_raw?: string
+  approved_amount?: number | null
+  approved_rate?: string | null
+  signing_date?: string | null
+  execution_date?: string | null
+  bank_branch?: string | null
+  manager_name?: string | null
+  stage_changed_at?: string | null
+  created_at: string
+  canceled_reason?: string | null
+}
+
+export interface MyConsultationDetail extends MyConsultationItem {
+  complex_name?: string | null
+  dong?: string | null
+  ho?: string | null
+  apt_type?: string | null
+  approved_notified_at?: string | null
+  customer_accepted_at?: string | null
+  signing_time?: string | null
+  loan_amount?: number | null
+  loan_period?: string | null
+  repayment_method?: string | null
+  product?: string | null
+  bank_manager_phone?: string | null
+  moving_in_date?: string | null
+  execution_completed?: boolean | null
+  settlement?: {
+    middle_principal?: number | null
+    middle_interest?: number | null
+    balance_principal?: number | null
+    balance_interest?: number | null
+    balcony?: number | null
+    options?: number | null
+    guarantee_fee?: number | null
+    mgmt_fee?: number | null
+    moving_allowance?: number | null
+    stamp_duty?: number | null
+  } | null
+}
+
 export const api = {
   // 상담신청 저장
   createConsultation: async (data: object | object[]) => {
@@ -83,6 +131,28 @@ export const api = {
       contact_phone?: string
       contact_email?: string
     }>
+  },
+
+  // 내 상담건 목록 (입주민 본인) — 진행단계 우선 정렬
+  getMyConsultations: async (phone: string) => {
+    const res = await fetch(
+      `${API_BASE_URL}/b2c/consultations?phone=${encodeURIComponent(phone)}`,
+      { headers: HEADERS },
+    )
+    if (!res.ok) throw new Error('내 상담 조회 실패')
+    return res.json() as Promise<Array<MyConsultationItem>>
+  },
+
+  // 내 상담건 상세 (소유자 검증: phone 일치)
+  getMyConsultationDetail: async (id: string, phone: string) => {
+    const res = await fetch(
+      `${API_BASE_URL}/b2c/consultations/${id}?phone=${encodeURIComponent(phone)}`,
+      { headers: HEADERS },
+    )
+    if (res.status === 403) throw new Error('본인 상담건이 아닙니다')
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error('상담 상세 조회 실패')
+    return res.json() as Promise<MyConsultationDetail>
   },
 
   // 동의서 제출 — 마감 안 된 모든 은행에 ConsultationRequest 자동 생성됨
