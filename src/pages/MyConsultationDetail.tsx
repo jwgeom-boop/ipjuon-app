@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Phone, RefreshCw, X, Check } from "lucide-react";
+import { ArrowLeft, Phone, RefreshCw, X, Check, Copy } from "lucide-react";
 import { api, MyConsultationDetail as DetailType, MyConsultationStage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -231,8 +232,15 @@ const MyConsultationDetail = () => {
 
         {/* 정산 (executing 이상) */}
         {data.settlement && (data.stage === "executing" || data.stage === "done") && (
-          <Card title="💰 정산 내역">
-            <SettlementGrid s={data.settlement} />
+          <Card title="💰 정산 내역 · 송금 정보">
+            <SettlementTable
+              s={data.settlement}
+              consultationId={data.id}
+              phone={phone}
+              executionDate={data.execution_date}
+              stage={data.stage}
+              onUpdated={(updated) => setData(updated)}
+            />
           </Card>
         )}
 
@@ -375,38 +383,254 @@ function ScheduleRow({ label, date, time, dday }: { label: string; date: string;
   );
 }
 
-function SettlementGrid({ s }: { s: NonNullable<DetailType["settlement"]> }) {
-  const items: Array<[string, number | null | undefined]> = [
-    ["중도금 원금", s.middle_principal],
-    ["중도금 이자", s.middle_interest],
-    ["분양 잔금 원금", s.balance_principal],
-    ["분양 잔금 이자", s.balance_interest],
-    ["발코니 확장", s.balcony],
-    ["유상 옵션", s.options],
-    ["보증 수수료", s.guarantee_fee],
-    ["선수 관리비", s.mgmt_fee],
-    ["이주비", s.moving_allowance],
-    ["인지대", s.stamp_duty],
-  ].filter(([, v]) => v && v > 0);
+interface SettleRow {
+  label: string;
+  amount?: number | null;
+  bank?: string | null;
+  account?: string | null;
+  note?: string;
+  /** 입주민 보고용 특수 행 (중도금이자) */
+  reportable?: boolean;
+}
 
-  if (items.length === 0) {
+function SettlementTable({ s, consultationId, phone, executionDate, stage, onUpdated }: {
+  s: NonNullable<DetailType["settlement"]>;
+  consultationId: string;
+  phone: string;
+  executionDate?: string | null;
+  stage: MyConsultationStage;
+  onUpdated: (d: DetailType) => void;
+}) {
+  const rows: SettleRow[] = [
+    { label: "중도금 원금",   amount: s.middle_principal,    bank: s.middle_bank,   account: s.middle_account },
+    { label: "중도금 이자",   amount: s.middle_interest,                                                        reportable: true },
+    { label: "분양 잔금 원금", amount: s.balance_principal,   bank: "시행사",        account: s.balance_account },
+    { label: "분양 잔금 이자", amount: s.balance_interest },
+    { label: "발코니 확장",   amount: s.balcony,             bank: "시행사",        account: s.balance_account, note: "별매품" },
+    { label: "유상 옵션",     amount: s.options,             bank: "시행사",        account: s.balance_account },
+    { label: "보증 수수료",   amount: s.guarantee_fee,                                                         note: "HUG/HF 대납이자" },
+    { label: "선수 관리비",   amount: s.mgmt_fee,            bank: "관리사무소",     account: s.mgmt_account },
+    { label: "이주비",        amount: s.moving_allowance,    bank: s.moving_bank,   account: s.moving_account },
+    { label: "인지대",        amount: s.stamp_duty,                                                            note: "정액" },
+  ];
+
+  // 표시 대상: 금액이 있거나 / 보고 가능 행 (중도금이자)
+  const visible = rows.filter(r => r.reportable || (r.amount && r.amount > 0));
+  const total = rows.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+  if (visible.length === 0) {
     return <p className="text-[12px] text-muted-foreground">정산 내역 입력 대기 중</p>;
   }
 
-  const total = items.reduce((sum, [, v]) => sum + (v || 0), 0);
+  return (
+    <div className="space-y-2.5">
+      {visible.map((r, i) => (
+        <SettlementRow
+          key={i}
+          row={r}
+          settlement={s}
+          consultationId={consultationId}
+          phone={phone}
+          executionDate={executionDate}
+          stage={stage}
+          onUpdated={onUpdated}
+        />
+      ))}
+      <div className="border-t-2 border-border pt-2 mt-2 flex justify-between items-center">
+        <span className="text-sm font-bold text-foreground">합계</span>
+        <span className="text-base font-extrabold text-primary">{toEok(total)}</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground pt-1">
+        ※ 송금은 상담사 안내에 따라 진행 — 본 화면은 확인용
+      </p>
+    </div>
+  );
+}
+
+function SettlementRow({ row, settlement, consultationId, phone, executionDate, stage, onUpdated }: {
+  row: SettleRow;
+  settlement: NonNullable<DetailType["settlement"]>;
+  consultationId: string;
+  phone: string;
+  executionDate?: string | null;
+  stage: MyConsultationStage;
+  onUpdated: (d: DetailType) => void;
+}) {
+  // 중도금이자 보고 가능 시점: executing + 실행일 D-1 ~ D+0 + 미확정
+  const isMiddleInterestReport = row.reportable && row.label === "중도금 이자";
+  const canReport = (() => {
+    if (!isMiddleInterestReport) return false;
+    if (stage !== "executing") return false;
+    if (!executionDate) return false;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const exec = new Date(executionDate); exec.setHours(0,0,0,0);
+    const diffDays = Math.round((exec.getTime() - today.getTime()) / (1000*60*60*24));
+    if (diffDays > 1 || diffDays < 0) return false;
+    if (settlement.middle_interest && settlement.middle_interest > 0) return false; // 확정됨
+    return true;
+  })();
+
+  if (isMiddleInterestReport) {
+    return (
+      <MiddleInterestReportRow
+        settlement={settlement}
+        canReport={canReport}
+        consultationId={consultationId}
+        phone={phone}
+        onUpdated={onUpdated}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-1.5">
-      {items.map(([k, v]) => (
-        <div key={k} className="flex justify-between text-sm">
-          <span className="text-muted-foreground">{k}</span>
-          <span className="font-medium text-foreground">{(v || 0).toLocaleString()}원</span>
-        </div>
-      ))}
-      <div className="border-t border-border pt-1.5 mt-1.5 flex justify-between text-sm font-bold">
-        <span className="text-foreground">합계</span>
-        <span className="text-primary">{toEok(total)}</span>
+    <div className="border border-border/50 rounded-lg p-2.5 bg-muted/20">
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="text-[13px] font-bold text-foreground">{row.label}</span>
+        <span className="text-sm font-bold text-foreground">{(row.amount || 0).toLocaleString()}원</span>
       </div>
+      {(row.bank || row.account || row.note) && (
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          {row.bank && <span>{row.bank}</span>}
+          {row.account && (
+            <>
+              {row.bank && <span>·</span>}
+              <span className="font-mono">{row.account}</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(row.account!).then(() => toast.success("계좌번호 복사됨"));
+                }}
+                className="ml-auto p-1 rounded hover:bg-background"
+                title="계좌번호 복사"
+              >
+                <Copy className="w-3 h-3" />
+              </button>
+            </>
+          )}
+          {row.note && <span className="ml-auto text-muted-foreground/70">{row.note}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiddleInterestReportRow({ settlement, canReport, consultationId, phone, onUpdated }: {
+  settlement: NonNullable<DetailType["settlement"]>;
+  canReport: boolean;
+  consultationId: string;
+  phone: string;
+  onUpdated: (d: DetailType) => void;
+}) {
+  const confirmed = !!(settlement.middle_interest && settlement.middle_interest > 0);
+  const reported = settlement.reported_middle_interest;
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    const amt = Number(input.replace(/\D/g, ""));
+    if (!amt || amt <= 0) { toast.error("금액을 입력해주세요"); return; }
+    setBusy(true);
+    try {
+      const updated = await api.reportMiddleInterest(consultationId, phone, amt);
+      onUpdated(updated);
+      setInput("");
+      toast.success("중도금이자 보고 완료 — 상담사 확인 대기");
+    } catch (e: any) {
+      toast.error(e?.message || "보고 실패");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // 1) 확정됨 → 일반 행처럼 표시
+  if (confirmed) {
+    return (
+      <div className="border border-border/50 rounded-lg p-2.5 bg-muted/20">
+        <div className="flex items-baseline justify-between">
+          <span className="text-[13px] font-bold text-foreground">중도금 이자 ✅ 확정</span>
+          <span className="text-sm font-bold text-foreground">{(settlement.middle_interest || 0).toLocaleString()}원</span>
+        </div>
+        {reported && reported !== settlement.middle_interest && (
+          <p className="text-[11px] text-muted-foreground mt-1">
+            (입주민 보고: {reported.toLocaleString()}원 → 상담사 확정값 우선)
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // 2) 보고함, 미확정 → 보고값 표시 + 대기 안내
+  if (reported && reported > 0) {
+    return (
+      <div className="border-2 border-blue-200 rounded-lg p-3 bg-blue-50">
+        <div className="flex items-baseline justify-between mb-1">
+          <span className="text-[13px] font-bold text-blue-900">중도금 이자 (보고됨)</span>
+          <span className="text-sm font-bold text-blue-900">{reported.toLocaleString()}원</span>
+        </div>
+        <p className="text-[11px] text-blue-700">⏳ 상담사 확인 대기 중</p>
+        {canReport && (
+          <button
+            onClick={() => setInput(reported.toLocaleString())}
+            className="text-[11px] text-blue-600 underline mt-1.5"
+          >
+            금액 수정하기
+          </button>
+        )}
+        {input && (
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={input}
+              onChange={e => {
+                const num = e.target.value.replace(/\D/g, "");
+                setInput(num ? Number(num).toLocaleString() : "");
+              }}
+              placeholder="원"
+              className="h-9 text-sm"
+              inputMode="numeric"
+            />
+            <Button size="sm" onClick={submit} disabled={busy}>{busy ? "..." : "재보고"}</Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 3) 보고 가능 시점 → 입력 폼
+  if (canReport) {
+    return (
+      <div className="border-2 border-orange-200 rounded-lg p-3 bg-orange-50">
+        <p className="text-[13px] font-bold text-orange-900 mb-1">📌 중도금 이자 보고 필요</p>
+        <p className="text-[11px] text-orange-700 mb-2.5">
+          실행일 당일 은행에서 확인한 이자 금액을 입력해주세요. 상담사가 확인 후 확정합니다.
+        </p>
+        <div className="flex gap-2">
+          <Input
+            value={input}
+            onChange={e => {
+              const num = e.target.value.replace(/\D/g, "");
+              setInput(num ? Number(num).toLocaleString() : "");
+            }}
+            placeholder="예: 165,601"
+            className="h-10 text-sm"
+            inputMode="numeric"
+          />
+          <Button onClick={submit} disabled={busy || !input}>
+            {busy ? "..." : "보고"}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // 4) 보고 시점 아님 (실행일 미설정 또는 D+1 이후) → 안내만
+  return (
+    <div className="border border-dashed border-border rounded-lg p-2.5 bg-muted/10">
+      <div className="flex items-baseline justify-between">
+        <span className="text-[13px] font-medium text-muted-foreground">중도금 이자</span>
+        <span className="text-[12px] text-muted-foreground">실행일에 보고</span>
+      </div>
+      <p className="text-[11px] text-muted-foreground mt-0.5">
+        실행일 전날~당일에 은행에서 확인 후 입력 가능
+      </p>
     </div>
   );
 }

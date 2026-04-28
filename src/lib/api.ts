@@ -42,15 +42,26 @@ export interface MyConsultationDetail extends MyConsultationItem {
   settlement?: {
     middle_principal?: number | null
     middle_interest?: number | null
+    middle_bank?: string | null
+    middle_account?: string | null
+    reported_middle_interest?: number | null
+    reported_middle_interest_at?: string | null
     balance_principal?: number | null
     balance_interest?: number | null
+    balance_account?: string | null
     balcony?: number | null
     options?: number | null
     guarantee_fee?: number | null
     mgmt_fee?: number | null
+    mgmt_account?: string | null
     moving_allowance?: number | null
+    moving_bank?: string | null
+    moving_account?: string | null
     stamp_duty?: number | null
+    stamp_duty_additional?: number | null
   } | null
+  additional_loan_amount?: number | null
+  bank_manager_fax?: string | null
 }
 
 export const api = {
@@ -187,6 +198,20 @@ export const api = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.error || '수용 처리 실패')
+    }
+    return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // 중도금이자 보고 — 실행일 D-1~D+0 사이에만, 상담사 확정 전까지 수정 가능
+  reportMiddleInterest: async (id: string, phone: string, amount: number) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/report-middle-interest`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone, amount }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '보고 실패')
     }
     return res.json() as Promise<MyConsultationDetail>
   },
