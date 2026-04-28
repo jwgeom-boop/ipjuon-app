@@ -79,7 +79,7 @@ const QUICK_INCOMES = [
   { label: "1억5천", value: 15000 },
 ];
 
-const QUICK_RATES = [3.0, 3.3, 3.5, 3.8, 4.2, 5.0];
+const QUICK_RATES = [3.0, 3.5, 4.0, 4.5];
 const TERM_OPTIONS = [10, 20, 30, 40, 50];
 
 function calcMonthly(principal: number, annualRate: number, years: number) {
@@ -205,12 +205,6 @@ const LoanCalcDiagnosis = () => {
   const goPrev = () => { if (step > 1) setStep(step - 1); };
 
   const handleRestart = () => setStep(1);
-
-  // Rate hint
-  const rateHint = inputRate < 3 ? { text: "매우 낮음 — 재확인 필요", color: "text-green-700 bg-green-50" }
-    : inputRate <= 3.5 ? { text: "✅ 우수한 금리", color: "text-green-700 bg-green-50" }
-    : inputRate <= 4.2 ? { text: "📊 시장 평균 수준", color: "text-primary bg-primary/5" }
-    : { text: "📌 높은 편 — 타 기관 비교 필요", color: "text-orange-700 bg-orange-50" };
 
   // Scenarios
   const scenarios = [
@@ -523,7 +517,7 @@ const LoanCalcDiagnosis = () => {
               <p className="text-xs text-muted-foreground mt-1">실제 상담받은 금리 또는 현재 시장 금리 입력</p>
             </div>
 
-            <Field label="희망 금리 (%)">
+            <Field label="금리 (%)">
               <Input
                 value={rateInput}
                 onChange={e => setRateInput(e.target.value.replace(/[^0-9.]/g, ""))}
@@ -540,11 +534,6 @@ const LoanCalcDiagnosis = () => {
                   </button>
                 ))}
               </div>
-              {inputRate > 0 && (
-                <div className={`rounded-lg px-3 py-2 mt-2 ${rateHint.color}`}>
-                  <p className="text-[12px] font-medium">{rateHint.text}</p>
-                </div>
-              )}
             </Field>
 
             <Field label="대출 기간">
