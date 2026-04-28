@@ -206,11 +206,10 @@ const LoanCalcDiagnosis = () => {
 
   const handleRestart = () => setStep(1);
 
-  // Scenarios
+  // Scenarios (현재 + 0.5%p 시나리오만)
   const scenarios = [
     { label: `${effectiveRate.toFixed(2)}% (현재)`, ...calcMonthly(appliedLimit, effectiveRate, termYears) },
     { label: `+0.5%`, ...calcMonthly(appliedLimit, effectiveRate + 0.5, termYears) },
-    { label: `+1.0%`, ...calcMonthly(appliedLimit, effectiveRate + 1.0, termYears) },
   ];
 
   return (
@@ -615,36 +614,42 @@ const LoanCalcDiagnosis = () => {
               </div>
             )}
 
-            {/* Detail cards (approved / conditional only) */}
+            {/* Unified detail card (approved / conditional only) */}
             {!isRejected && (
-              <>
-                <DetailCard title="📊 LTV 심사" headerColor="bg-primary" items={[
-                  ["기준가", toEok(basePrice)],
-                  ["LTV 비율", `${ltvPct}%`],
-                  ["LTV 최대 한도", toEok(ltvLimit)],
-                  ...(priceTier !== null
-                    ? [["주택가격별 한도 (수도권·규제)", toEok(priceTier)] as [string, string]]
-                    : []),
-                ]} />
-
-                <DetailCard title="💰 DSR·소득 심사" headerColor="bg-green-600" items={[
-                  ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권 — 상호금융"} (DSR ${Math.round(dsrPct * 100)}%)`],
-                  ["연소득", toEok(income)],
-                  ["기존대출 상환액", `${existingMonthly.toLocaleString()}만원/월`],
-                  ["스트레스 가산금리", `+${stressRate.toFixed(2)}%p (${location === "metro" && regulated === true ? "수도권·규제" : location === "metro" ? "수도권 비규제" : "지방"})`],
-                  ["DSR 산정금리", `${dsrCalcRate.toFixed(2)}% (입력 ${inputRate.toFixed(2)}% + 스트레스)`],
-                  ["DSR 최대 한도", toEok(dsrLimit)],
-                ]} />
-
-                <DetailCard title="📊 대출 조건" headerColor="bg-accent" items={[
-                  ["입력 금리 (실 적용)", `${effectiveRate.toFixed(2)}%`],
-                  ["대출 기간", `${termYears}년`],
-                ]} />
-
-                <DetailCard title="⚠️ 금리 변동 시나리오" headerColor="bg-orange-500" items={
-                  scenarios.map(s => [s.label, `${s.monthly.toLocaleString()}만원/월`])
-                } />
-              </>
+              <div className="rounded-[14px] overflow-hidden border border-border bg-card">
+                <div className="bg-primary px-4 py-2">
+                  <p className="text-sm font-bold text-white">📋 심사 상세</p>
+                </div>
+                <div className="px-4 py-3 divide-y divide-border/50">
+                  {/* LTV */}
+                  <DetailSection title="📊 LTV" items={[
+                    ["기준가", toEok(basePrice)],
+                    ["LTV 비율", `${ltvPct}%`],
+                    ["LTV 최대 한도", toEok(ltvLimit)],
+                    ...(priceTier !== null
+                      ? [["주택가격별 한도 (수도권·규제)", toEok(priceTier)] as [string, string]]
+                      : []),
+                  ]} />
+                  {/* DSR */}
+                  <DetailSection title="💰 DSR·소득" items={[
+                    ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권 — 상호금융"} (DSR ${Math.round(dsrPct * 100)}%)`],
+                    ["연소득", toEok(income)],
+                    ["기존대출 상환액", `${existingMonthly.toLocaleString()}만원/월`],
+                    ["스트레스 가산금리", `+${stressRate.toFixed(2)}%p (${location === "metro" && regulated === true ? "수도권·규제" : location === "metro" ? "수도권 비규제" : "지방"})`],
+                    ["DSR 산정금리", `${dsrCalcRate.toFixed(2)}% (입력 ${inputRate.toFixed(2)}% + 스트레스)`],
+                    ["DSR 최대 한도", toEok(dsrLimit)],
+                  ]} />
+                  {/* 대출 조건 */}
+                  <DetailSection title="📊 대출 조건" items={[
+                    ["입력 금리 (실 적용)", `${effectiveRate.toFixed(2)}%`],
+                    ["대출 기간", `${termYears}년`],
+                  ]} />
+                  {/* 금리 변동 시나리오 */}
+                  <DetailSection title="⚠️ 금리 변동 시나리오" items={
+                    scenarios.map(s => [s.label, `${s.monthly.toLocaleString()}만원/월`])
+                  } />
+                </div>
+              </div>
             )}
 
             {/* Disclaimer */}
@@ -727,17 +732,15 @@ function ChoiceBtn({ selected, onClick, title, sub }: { selected: boolean; onCli
   );
 }
 
-function DetailCard({ title, headerColor, items }: { title: string; headerColor: string; items: [string, string][] }) {
+function DetailSection({ title, items }: { title: string; items: [string, string][] }) {
   return (
-    <div className="rounded-[14px] overflow-hidden border border-border">
-      <div className={`${headerColor} px-4 py-2`}>
-        <p className="text-sm font-bold text-white">{title}</p>
-      </div>
-      <div className="px-4 py-3 space-y-1.5">
+    <div className="py-2.5 first:pt-0 last:pb-0">
+      <p className="text-[12px] font-bold text-foreground mb-1.5">{title}</p>
+      <div className="space-y-1">
         {items.map(([k, v], i) => (
-          <div key={i} className="flex justify-between text-sm">
+          <div key={i} className="flex justify-between text-[13px]">
             <span className="text-muted-foreground">{k}</span>
-            <span className="font-medium text-foreground">{v}</span>
+            <span className="font-medium text-foreground text-right">{v}</span>
           </div>
         ))}
       </div>
