@@ -16,23 +16,45 @@ const toEok = (m: number) => {
 
 const STEP_LABELS = ["아파트 정보", "주택 조건", "소득 정보", "부채·신용", "대출 조건"];
 
-/* ── LTV Table (이 아파트 취득 후 보유 주택 수 기준)
-   ┌─────────────────────┬────────┬────────┐
-   │ 거래 후 주택 수     │ 비규제 │ 규제   │
-   ├─────────────────────┼────────┼────────┤
-   │ 1주택 + 생애최초    │  80%   │  80%   │
-   │ 1주택 (무→1)        │  70%   │  50%   │
-   │ 2주택 (1→2, 처분약정)│  60%   │  50%   │
-   │ 3주택+ (다주택)     │  60%   │  30%   │
-   └─────────────────────┴────────┴────────┘
-   ※ 2주택은 기존 주택 처분조건부 가정 (미체결 시 실제 대출 어려움)
+/* ── LTV Table (2025.10.16 시행 / 10.15 주택시장 안정화 대책)
+   ┌──────────────────────────┬────────┬─────────┬─────────┐
+   │ 거래 후 주택 수          │ 지방   │ 수도권  │ 수도권· │
+   │                          │ 비규제 │ 비규제  │ 규제    │
+   ├──────────────────────────┼────────┼─────────┼─────────┤
+   │ 1주택 + 생애최초 (무→1)  │  80%   │  70%    │  70%    │
+   │ 1주택 일반 (무→1)        │  70%   │  70%    │  40%    │
+   │ 2주택 (1→2, 처분조건부)  │  60%   │   0%    │   0%    │
+   │ 3주택+ (다주택)          │  60%   │   0%    │   0%    │
+   └──────────────────────────┴────────┴─────────┴─────────┘
+   ※ 수도권·규제지역에서 1주택자 미처분 / 다주택자는 잔금대출 불가 (LTV 0%)
+   ※ 처분조건부 1주택은 6개월 이내 기존 주택 처분 약정 시에만 가능
 */
-function calcLTV(firstTime: boolean, housingCount: number, regulated: boolean): number {
+function calcLTV(firstTime: boolean, housingCount: number, regulated: boolean, isMetro: boolean): number {
   // housingCount = 이 아파트 포함 거래 후 본인 보유 주택 수
-  if (housingCount === 1 && firstTime) return 80;        // 무주택자 + 생애최초
-  if (housingCount === 1) return regulated ? 50 : 70;    // 무주택자 1채 매입
-  if (housingCount === 2) return regulated ? 50 : 60;    // 1주택자 추가 (처분조건부)
-  return regulated ? 30 : 60;                             // 다주택 (3주택 이상)
+  // 1주택자 미처분 / 다주택자: 수도권 또는 규제지역에서는 대출 불가
+  if (housingCount >= 2 && (regulated || isMetro)) return 0;
+
+  if (housingCount === 1 && firstTime) {
+    // 생애최초: 지방 비규제 80%, 그 외(수도권 비규제 / 수도권·규제) 70%
+    if (regulated || isMetro) return 70;
+    return 80;
+  }
+  if (housingCount === 1) {
+    // 무주택자 일반: 규제 40%, 비규제 70%
+    return regulated ? 40 : 70;
+  }
+  // housingCount >= 2 + 지방 비규제 → 60% (1주택자 처분조건부 / 다주택)
+  return 60;
+}
+
+/* ── 주택가격별 대출한도 (수도권·규제지역 / 시가 기준 / 10.16 시행) ── */
+function priceTierLimit(priceManwon: number, regulated: boolean, isMetro: boolean): number | null {
+  // 수도권·규제지역만 적용. 그 외 지역은 한도 없음 (null 반환)
+  if (!(regulated || isMetro)) return null;
+  const eok = priceManwon / 10000;
+  if (eok <= 15) return 60000;     // 6억
+  if (eok <= 25) return 40000;     // 4억
+  return 20000;                     // 2억
 }
 
 /* ── Credit grade info ── */
@@ -120,18 +142,25 @@ const LoanCalcDiagnosis = () => {
   const existingMonthly = hasExistingLoan ? parseNum(existingMonthlyRaw) : 0;
   const dsrPct = financialSector === "first" ? 0.4 : financialSector === "second" ? 0.5 : 0.4;
   const inputRate = parseFloat(rateInput) || 0;
-  // 정부 스트레스 DSR 규제 (2024~): 변동·혼합 주담대 한도 산정 시 가산금리 적용.
-  // 수도권 +3.0%p, 비수도권 +0.75%p (변동금리 100% 비율 가정 — 보수적 추정).
+  // 스트레스 DSR (3단계, 2025.7 시행 / 10.15 대책으로 수도권·규제 상향):
+  //   수도권·규제 +3.0%p, 수도권 비규제 +1.5%p, 지방 +0.75%p
   // 실제 표시 금리(effectiveRate)와 분리하여 한도 계산용으로만 사용.
-  const stressRate = location === "metro" ? 3.0 : location === "local" ? 0.75 : 0;
+  const stressRate = (location === "metro" && regulated === true) ? 3.0
+    : location === "metro" ? 1.5
+    : location === "local" ? 0.75 : 0;
   const dsrCalcRate = inputRate + stressRate;
   const effectiveRate = inputRate;
   const desired = parseNum(desiredRaw);
 
+  const isMetro = location === "metro";
   const ltvPct = (firstTime !== null && housingCount !== null && regulated !== null)
-    ? calcLTV(firstTime === true, housingCount, regulated === true)
+    ? calcLTV(firstTime === true, housingCount, regulated === true, isMetro)
     : null;
   const ltvLimit = ltvPct !== null ? Math.round(basePrice * ltvPct / 100) : 0;
+  // 수도권·규제지역 주택가격별 한도 차등 (15억 이하 6억 / ~25억 4억 / 초과 2억)
+  const priceTier = (regulated !== null && location !== null)
+    ? priceTierLimit(basePrice, regulated === true, isMetro)
+    : null;
 
   const availableMonthly = recognizedIncome > 0
     ? Math.round(Math.max(0, recognizedIncome * dsrPct / 12 - existingMonthly))
@@ -140,12 +169,16 @@ const LoanCalcDiagnosis = () => {
   const dsrLimit = dsrCalcRate > 0 ? calcMaxLoan(availableMonthly, dsrCalcRate, termYears) : 0;
 
   let appliedLimit = Math.min(ltvLimit, dsrLimit);
+  if (priceTier !== null) appliedLimit = Math.min(appliedLimit, priceTier);
   if (desired > 0) appliedLimit = Math.min(appliedLimit, desired);
 
   const { monthly, totalInterest } = calcMonthly(appliedLimit, effectiveRate, termYears);
 
   // Rejection
   const rejections: string[] = [];
+  if (ltvPct === 0) {
+    rejections.push("수도권·규제지역에서 1주택자(미처분)·다주택자는 잔금대출 불가 (10.15 대책 / 10.16 시행).");
+  }
   if (dsrLimit <= 0) rejections.push("DSR 초과: 소득 대비 기존 대출 상환 부담이 높아 추가 대출이 어렵습니다.");
 
   const warnings: string[] = [];
@@ -248,7 +281,7 @@ const LoanCalcDiagnosis = () => {
                   selected={regulated === true}
                   onClick={() => setRegulated(true)}
                   title="규제지역"
-                  sub="강남·서초·송파·용산"
+                  sub="투기과열·조정·토허"
                 />
                 <ChoiceBtn
                   selected={regulated === false}
@@ -258,8 +291,13 @@ const LoanCalcDiagnosis = () => {
                 />
               </div>
               <div className="mt-2 px-3 py-2 rounded-md bg-muted/50 border border-border text-[11px] text-muted-foreground leading-relaxed">
-                <p className="font-semibold text-foreground mb-1">📍 규제지역 (투기과열·조정대상)</p>
-                <p>현재 <span className="text-foreground font-medium">서울 강남·서초·송파·용산</span> 4개 구만 지정 (2024 기준).<br />그 외 지역은 모두 비규제지역으로 선택하세요.</p>
+                <p className="font-semibold text-foreground mb-1">📍 규제지역 (투기과열·조정·토지거래허가 삼중규제)</p>
+                <p>
+                  · <span className="text-foreground font-medium">서울 25개구 전역</span><br />
+                  · <span className="text-foreground font-medium">경기 12개 지역</span>: 과천, 광명, 수원(영통·장안·팔달), 성남(분당·수정·중원), 안양 동안, 용인 수지, 의왕, 하남<br />
+                  그 외는 모두 비규제지역.
+                </p>
+                <p className="mt-1 text-[10px]">기준일 2026.04.28 · 2025.10.16 시행</p>
               </div>
             </Field>
           </>
@@ -290,10 +328,11 @@ const LoanCalcDiagnosis = () => {
               <div className="space-y-2">
                 {[
                   { count: 1, icon: "🏠", title: "1주택 (이번이 첫 집)", sub: "현재 무주택" },
-                  { count: 2, icon: "🏡", title: "2주택 (1주택자, 기존 처분 예정)", sub: "기존 1채는 처분 약정" },
+                  { count: 2, icon: "🏡", title: "2주택 (1주택자, 기존 처분 예정)", sub: "기존 1채는 6개월 내 처분 약정" },
                   { count: 3, icon: "🏘️", title: "3주택 이상 (다주택자)", sub: "기존 2채 이상 보유" },
                 ].map(h => {
-                  const ltv = (firstTime !== null && regulated !== null) ? calcLTV(firstTime === true, h.count, regulated === true) : null;
+                  const ltv = (firstTime !== null && regulated !== null && location !== null)
+                    ? calcLTV(firstTime === true, h.count, regulated === true, location === "metro") : null;
                   const selected = housingCount === h.count;
                   return (
                     <button
@@ -307,7 +346,7 @@ const LoanCalcDiagnosis = () => {
                       </div>
                       {ltv !== null && (
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${ltv === 0 ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"}`}>
-                          LTV {ltv}%
+                          {ltv === 0 ? "대출 불가" : `LTV ${ltv}%`}
                         </span>
                       )}
                     </button>
@@ -317,33 +356,43 @@ const LoanCalcDiagnosis = () => {
             </Field>
 
             <div className="rounded-md border border-border bg-muted/40 p-3">
-              <p className="text-[12px] font-semibold text-foreground mb-2">📋 LTV 기준표 (2024년 기준)</p>
+              <p className="text-[12px] font-semibold text-foreground mb-2">📋 LTV 기준표 (2025.10.16 시행 · 2026.04 기준)</p>
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="text-muted-foreground border-b border-border/60">
                     <th className="text-left pb-1 font-medium">구분</th>
-                    <th className="text-right pb-1 font-medium">비규제</th>
-                    <th className="text-right pb-1 font-medium">규제지역</th>
+                    <th className="text-right pb-1 font-medium">지방<br/>비규제</th>
+                    <th className="text-right pb-1 font-medium">수도권<br/>비규제</th>
+                    <th className="text-right pb-1 font-medium">수도권·<br/>규제</th>
                   </tr>
                 </thead>
                 <tbody className="text-foreground">
                   {[
-                    { key: "first", label: "생애최초 (무주택)", non: 80, reg: 80, match: firstTime === true && housingCount === 1 },
-                    { key: "h1", label: "1주택 (무주택→1)", non: 70, reg: 50, match: firstTime === false && housingCount === 1 },
-                    { key: "h2", label: "2주택 (1주택→2, 처분조건부)", non: 60, reg: 50, match: housingCount === 2 },
-                    { key: "h3", label: "3주택+ (다주택)", non: 60, reg: 30, match: housingCount === 3 },
-                  ].map(row => (
-                    <tr key={row.key} className={`border-b border-border/30 ${row.match ? "bg-primary/10 font-semibold" : ""}`}>
-                      <td className="py-1">{row.label}</td>
-                      <td className={`text-right py-1 ${row.match && regulated === false ? "text-primary font-bold" : ""}`}>{row.non}%</td>
-                      <td className={`text-right py-1 ${row.match && regulated === true ? "text-primary font-bold" : ""}`}>{row.reg}%</td>
-                    </tr>
-                  ))}
+                    { key: "first", label: "생애최초 (무주택)", local: 80, metroNon: 70, metroReg: 70, match: firstTime === true && housingCount === 1 },
+                    { key: "h1", label: "1주택 (무주택→1)", local: 70, metroNon: 70, metroReg: 40, match: firstTime === false && housingCount === 1 },
+                    { key: "h2", label: "2주택 (처분조건부)", local: 60, metroNon: 0, metroReg: 0, match: housingCount === 2 },
+                    { key: "h3", label: "3주택+ (다주택)", local: 60, metroNon: 0, metroReg: 0, match: housingCount === 3 },
+                  ].map(row => {
+                    const cellCls = (val: number, hit: boolean) =>
+                      `text-right py-1 ${val === 0 ? "text-destructive" : ""} ${hit ? "font-bold" : ""}`;
+                    const matchLocal = row.match && regulated === false && location === "local";
+                    const matchMetroNon = row.match && regulated === false && location === "metro";
+                    const matchMetroReg = row.match && regulated === true && location === "metro";
+                    return (
+                      <tr key={row.key} className={`border-b border-border/30 ${row.match ? "bg-primary/10 font-semibold" : ""}`}>
+                        <td className="py-1">{row.label}</td>
+                        <td className={cellCls(row.local, matchLocal)}>{row.local === 0 ? "—" : `${row.local}%`}</td>
+                        <td className={cellCls(row.metroNon, matchMetroNon)}>{row.metroNon === 0 ? "불가" : `${row.metroNon}%`}</td>
+                        <td className={cellCls(row.metroReg, matchMetroReg)}>{row.metroReg === 0 ? "불가" : `${row.metroReg}%`}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
-                ※ 규제지역 = 서울 강남·서초·송파·용산 4개 구<br/>
-                ※ 2주택은 기존 주택 처분 약정 시 가능 (미약정 시 신규 대출 제한)
+                ※ <strong>수도권·규제지역에서 1주택자(미처분)·다주택자 잔금대출 불가</strong> (LTV 0%)<br/>
+                ※ 처분조건부 1주택은 <strong>6개월 이내</strong> 기존 주택 처분 약정 시 가능<br/>
+                ※ 수도권·규제 주택가격별 한도: 15억 이하 6억 / ~25억 4억 / 초과 2억
               </p>
             </div>
 
@@ -559,13 +608,16 @@ const LoanCalcDiagnosis = () => {
                   ["기준가", toEok(basePrice)],
                   ["LTV 비율", `${ltvPct}%`],
                   ["LTV 최대 한도", toEok(ltvLimit)],
+                  ...(priceTier !== null
+                    ? [["주택가격별 한도 (수도권·규제)", toEok(priceTier)] as [string, string]]
+                    : []),
                 ]} />
 
                 <DetailCard title="💰 DSR·소득 심사" headerColor="bg-green-600" items={[
                   ["금융권", `${financialSector === "first" ? "1금융권" : "2금융권 — 상호금융"} (DSR ${Math.round(dsrPct * 100)}%)`],
                   ["연소득", toEok(income)],
                   ["기존대출 상환액", `${existingMonthly.toLocaleString()}만원/월`],
-                  ["스트레스 가산금리", `+${stressRate.toFixed(2)}%p (${location === "metro" ? "수도권" : "비수도권"})`],
+                  ["스트레스 가산금리", `+${stressRate.toFixed(2)}%p (${location === "metro" && regulated === true ? "수도권·규제" : location === "metro" ? "수도권 비규제" : "지방"})`],
                   ["DSR 산정금리", `${dsrCalcRate.toFixed(2)}% (입력 ${inputRate.toFixed(2)}% + 스트레스)`],
                   ["DSR 최대 한도", toEok(dsrLimit)],
                 ]} />
@@ -587,7 +639,9 @@ const LoanCalcDiagnosis = () => {
                 본 결과는 단순 참고용 사전 자가진단입니다. 실제 대출 승인 여부·한도·금리는 각 금융기관 심사 결과와 다를 수 있습니다.
                 신용등급·소득 증빙·담보 평가에 따라 결과가 달라집니다.
               </p>
-              <p className="text-[11px] text-muted-foreground">2026년 4월 기준 · 정책 변경 시 달라질 수 있습니다.</p>
+              <p className="text-[11px] text-muted-foreground">
+                기준일 2026.04.28 · 2025.10.16 시행 (10.15 주택시장 안정화 대책) · 정책 변경 시 달라질 수 있습니다.
+              </p>
             </div>
 
             {/* Action buttons */}
