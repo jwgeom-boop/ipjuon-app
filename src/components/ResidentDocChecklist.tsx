@@ -34,6 +34,7 @@ export default function ResidentDocChecklist({ data, phone, onUpdated, readOnly 
   }, [data.resident_doc_checks]);
   const [checked, setChecked] = useState<Set<string>>(initialChecked);
   const [savingTimer, setSavingTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [open, setOpen] = useState(false);  // 카드 전체 펼침/접힘
   const [expanded, setExpanded] = useState<Record<DocCategory, boolean>>({
     공통: true,
     소득_재직자: false,
@@ -82,20 +83,31 @@ export default function ResidentDocChecklist({ data, phone, onUpdated, readOnly 
 
   return (
     <div className="bg-card border border-border rounded-xl p-4">
-      <div className="flex items-baseline justify-between mb-3">
-        <p className="text-sm font-bold text-foreground">📋 자서 준비서류 체크리스트</p>
-        <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-          isAllRequired ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
-        }`}>
-          공통 {requiredDoneCount}/{requiredTotal}
-        </span>
-      </div>
-      <p className="text-[12px] text-muted-foreground mb-3">
-        준비할 때마다 ☑ 체크하세요. 자서 당일 차주·담보제공자 각 1세트 지참.
-      </p>
+      {/* 헤더 — 클릭으로 전체 펼침/접힘 */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full text-left"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            <span>📋 자서 준비서류 체크리스트</span>
+            {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+          </p>
+          <span className={`text-xs font-bold px-2 py-1 rounded-full shrink-0 ${
+            isAllRequired ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+          }`}>
+            공통 {requiredDoneCount}/{requiredTotal}
+          </span>
+        </div>
+        <p className="text-[12px] text-muted-foreground mt-2">
+          준비할 때마다 ☑ 체크하세요. 자서 당일 차주·담보제공자 각 1세트 지참.
+        </p>
+      </button>
 
+      {/* 펼친 상태일 때만 본문 */}
+      {!open ? null : <>
       {/* 진행 바 */}
-      <div className="h-1.5 rounded-full bg-muted overflow-hidden mb-4">
+      <div className="h-1.5 rounded-full bg-muted overflow-hidden mb-4 mt-3">
         <div
           className="h-full transition-all"
           style={{
@@ -180,6 +192,7 @@ export default function ResidentDocChecklist({ data, phone, onUpdated, readOnly 
           <p className="text-[11px] text-green-700/80 mt-0.5">소득·배우자 항목도 본인에게 해당하면 함께 준비해주세요.</p>
         </div>
       )}
+      </>}
     </div>
   );
 }
