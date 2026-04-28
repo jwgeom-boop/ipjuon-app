@@ -653,15 +653,9 @@ const LoanCalcDiagnosis = () => {
             )}
 
             {/* Disclaimer */}
-            <div className="px-1 space-y-1">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                본 결과는 단순 참고용 사전 자가진단입니다. 실제 대출 승인 여부·한도·금리는 각 금융기관 심사 결과와 다를 수 있습니다.
-                신용등급·소득 증빙·담보 평가에 따라 결과가 달라집니다.
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                기준일 2026.04.28 · 2025.10.16 시행 (10.15 주택시장 안정화 대책) · 정책 변경 시 달라질 수 있습니다.
-              </p>
-            </div>
+            <p className="px-1 text-[11px] text-muted-foreground">
+              ※ 참고용 · 실제 한도는 금융기관 심사에 따라 달라집니다.
+            </p>
 
             {/* Action buttons */}
             <div className="space-y-3 pt-2">
