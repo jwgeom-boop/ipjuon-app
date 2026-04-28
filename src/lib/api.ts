@@ -39,10 +39,20 @@ export interface MyConsultationDetail extends MyConsultationItem {
   customer_accepted_at?: string | null
   signing_time?: string | null
   signing_location?: string | null
-  signing_offered_slots?: string | null  // JSON string
-  signing_selected_slot_index?: number | null
+  // [v2] 캘린더 워크플로
+  signing_window_start?: string | null
+  signing_window_end?: string | null
+  signing_excluded_dates?: string | null  // JSON
+  signing_available_times?: string | null  // JSON
+  signing_available_locations?: string | null  // JSON
+  signing_selected_date?: string | null
+  signing_selected_time?: string | null
+  signing_selected_location_str?: string | null
   signing_selected_at?: string | null
   signing_confirmed_at?: string | null
+  // [Legacy]
+  signing_offered_slots?: string | null
+  signing_selected_slot_index?: number | null
   loan_amount?: number | null
   loan_period?: string | null
   repayment_method?: string | null
@@ -213,7 +223,21 @@ export const api = {
     return res.json() as Promise<MyConsultationDetail>
   },
 
-  // 자서 슬롯 선택 — 상담사가 제시한 슬롯 중 하나 선택
+  // [v2] 자서 캘린더 — date/time/location 선택
+  selectSigningCalendar: async (id: string, phone: string, date: string, time: string, location: string) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/select-signing-calendar`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone, date, time, location }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '일정 선택 실패')
+    }
+    return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // [Legacy] 자서 슬롯 선택
   selectSigningSlot: async (id: string, phone: string, slotIndex: number) => {
     const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/select-signing-slot`, {
       method: 'POST',
