@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import ConsultationDashboard from "./pages/ConsultationDashboard";
 import MyConsultations from "./pages/MyConsultations";
 import MyConsultationDetail from "./pages/MyConsultationDetail";
+import Notifications from "./pages/Notifications";
 import { RouteTitle } from "./components/RouteTitle";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
           <Route path="/my/consultations" element={<MyConsultations />} />
           <Route path="/my/consultations/:id" element={<MyConsultationDetail />} />
           <Route path="/my/partners" element={<Partners />} />
+          <Route path="/notifications" element={<Notifications />} />
           <Route path="/notices" element={<Notices />} />
           <Route path="/admin/consultations" element={<ConsultationDashboard />} />
           <Route path="*" element={<NotFound />} />

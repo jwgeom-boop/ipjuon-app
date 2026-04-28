@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Phone, RefreshCw } from "lucide-react";
+import { ArrowLeft, Phone, RefreshCw, X, Check } from "lucide-react";
 import { api, MyConsultationDetail as DetailType, MyConsultationStage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 const STAGES: Array<{ key: MyConsultationStage; label: string; emoji: string }> = [
   { key: "apply",      label: "신청 접수",      emoji: "📥" },
@@ -46,6 +51,42 @@ const MyConsultationDetail = () => {
   const [data, setData] = useState<DetailType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [acceptOpen, setAcceptOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+
+  const doAccept = async () => {
+    if (!id || !phone) return;
+    setActionBusy(true);
+    try {
+      const updated = await api.acceptConsultation(id, phone);
+      setData(updated);
+      setAcceptOpen(false);
+      toast.success("승인 의사를 전달했습니다");
+    } catch (e: any) {
+      toast.error(e?.message || "처리 실패");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const doCancel = async () => {
+    if (!id || !phone) return;
+    const reason = cancelReason.trim() || "고객 요청";
+    setActionBusy(true);
+    try {
+      const updated = await api.cancelConsultation(id, phone, reason);
+      setData(updated);
+      setCancelOpen(false);
+      setCancelReason("");
+      toast.success("취소 요청을 보냈습니다");
+    } catch (e: any) {
+      toast.error(e?.message || "처리 실패");
+    } finally {
+      setActionBusy(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -205,13 +246,94 @@ const MyConsultationDetail = () => {
           </div>
         </Card>
 
+        {/* 액션 버튼 */}
+        <ActionButtons
+          stage={data.stage}
+          accepted={!!data.customer_accepted_at}
+          onAccept={() => setAcceptOpen(true)}
+          onCancel={() => setCancelOpen(true)}
+        />
+
         <p className="text-[11px] text-muted-foreground text-center pt-2">
           ※ 정보는 상담사가 입력한 시점 기준 · 변동 가능
         </p>
       </div>
+
+      {/* 수용 다이얼로그 */}
+      <Dialog open={acceptOpen} onOpenChange={setAcceptOpen}>
+        <DialogContent className="max-w-[340px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>가심사 결과 수용</DialogTitle>
+            <DialogDescription>
+              승인 {toEok(data.approved_amount)}{data.approved_rate ? ` · ${data.approved_rate}` : ""} 조건에 동의하고 다음 단계(자서·실행)로 진행을 요청합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setAcceptOpen(false)} disabled={actionBusy}>취소</Button>
+            <Button className="flex-1" onClick={doAccept} disabled={actionBusy}>
+              <Check className="w-4 h-4 mr-1" /> 수용하기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 취소 요청 다이얼로그 */}
+      <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+        <DialogContent className="max-w-[340px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>상담 취소 요청</DialogTitle>
+            <DialogDescription>
+              상담사에게 취소 요청이 전달됩니다. 사유를 적어주시면 더 빠르게 처리됩니다.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={cancelReason}
+            onChange={e => setCancelReason(e.target.value)}
+            placeholder="예: 다른 은행에서 진행하기로 함"
+            rows={3}
+            className="mt-2"
+          />
+          <DialogFooter className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setCancelOpen(false)} disabled={actionBusy}>닫기</Button>
+            <Button variant="destructive" className="flex-1" onClick={doCancel} disabled={actionBusy}>
+              <X className="w-4 h-4 mr-1" /> 취소 요청
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+
+function ActionButtons({ stage, accepted, onAccept, onCancel }: {
+  stage: MyConsultationStage; accepted: boolean; onAccept: () => void; onCancel: () => void;
+}) {
+  if (stage === "done" || stage === "cancel") return null;
+
+  return (
+    <div className="space-y-2 pt-1">
+      {stage === "result" && !accepted && (
+        <Button
+          className="w-full h-12 text-base font-semibold"
+          style={{ background: "linear-gradient(135deg, #7c3aed, #5b21b6)" }}
+          onClick={onAccept}
+        >
+          <Check className="w-4 h-4 mr-1" /> 가심사 결과 수용하기
+        </Button>
+      )}
+      {stage === "result" && accepted && (
+        <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-2.5 text-center">
+          <p className="text-sm text-green-800 font-medium">✅ 수용 의사 전달됨 — 자서·실행 일정 조율 중</p>
+        </div>
+      )}
+      {(stage === "apply" || stage === "consulting" || stage === "result") && (
+        <Button variant="outline" className="w-full h-11 text-sm" onClick={onCancel}>
+          상담 취소 요청
+        </Button>
+      )}
+    </div>
+  );
+}
 
 function Card({ title, accent, children }: { title: string; accent?: "purple"; children: React.ReactNode }) {
   const accentBorder = accent === "purple" ? "border-purple-200" : "border-border";

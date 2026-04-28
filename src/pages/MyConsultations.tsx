@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowLeft, Bell, ChevronRight, RefreshCw } from "lucide-react";
 import { api, MyConsultationItem, MyConsultationStage } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import BottomTabBar from "@/components/BottomTabBar";
@@ -86,9 +86,14 @@ const MyConsultations = () => {
             </button>
             <h1 className="text-base font-bold text-foreground">📋 내 상담 현황</h1>
           </div>
-          <button onClick={() => { load(); toast.success("새로고침됨"); }} className="p-1.5 rounded-full hover:bg-muted">
-            <RefreshCw className={`w-4 h-4 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={() => navigate("/notifications")} className="p-1.5 rounded-full hover:bg-muted" title="알림함">
+              <Bell className="w-4 h-4 text-muted-foreground" />
+            </button>
+            <button onClick={() => { load(); toast.success("새로고침됨"); }} className="p-1.5 rounded-full hover:bg-muted">
+              <RefreshCw className={`w-4 h-4 text-muted-foreground ${loading ? "animate-spin" : ""}`} />
+            </button>
+          </div>
         </div>
       </div>
 

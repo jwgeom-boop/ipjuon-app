@@ -155,6 +155,34 @@ export const api = {
     return res.json() as Promise<MyConsultationDetail>
   },
 
+  // 가심사 결과 수용 (result 단계에서만 가능)
+  acceptConsultation: async (id: string, phone: string) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/accept`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '수용 처리 실패')
+    }
+    return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // 입주민 측 취소 요청 (cancel_requested → 상담사가 사이트에서 최종 처리)
+  cancelConsultation: async (id: string, phone: string, reason: string) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/cancel`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone, reason }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '취소 요청 실패')
+    }
+    return res.json() as Promise<MyConsultationDetail>
+  },
+
   // 동의서 제출 — 마감 안 된 모든 은행에 ConsultationRequest 자동 생성됨
   submitConsent: async (data: {
     resident_name: string
