@@ -257,12 +257,11 @@ const LoanCalcDiagnosis = () => {
               <p className="text-xs text-muted-foreground mt-1">LTV 한도 계산의 기준이 됩니다</p>
             </div>
 
-            <Field label="주택 시가 (필수)">
+            <Field label="주택 가격 (필수)">
               <Input value={priceRaw} onChange={e => setPriceRaw(fmtNum(e.target.value))} placeholder="만원 단위 입력 (예: 50000 = 5억)" className="h-11" inputMode="numeric" />
               {price > 0 && <p className="text-xs text-accent mt-1 font-medium">💡 약 {toEok(price)}</p>}
-              <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                ※ 잔금대출은 <strong>시세 기준</strong>(한국부동산원·KB부동산 일반평균가)으로 한도 산정.<br />
-                시세 모르면 분양가로 입력해도 됩니다.
+              <p className="text-[12px] text-muted-foreground mt-1.5 leading-relaxed">
+                💡 감정가(시세)가 없으면 분양가를 입력하세요.
               </p>
             </Field>
 
@@ -306,27 +305,28 @@ const LoanCalcDiagnosis = () => {
                     </div>
                   </div>
 
-                  {/* 경기 */}
+                  {/* 경기 — 4컬럼 grid로 깔끔히 2줄 정렬 */}
                   <div className="flex items-start gap-3">
                     <span className="text-xl shrink-0">🏘️</span>
                     <div className="flex-1">
                       <p className="text-sm font-bold text-foreground mb-2">경기 12개 지역</p>
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="grid grid-cols-4 gap-1.5">
                         {[
-                          "과천", "광명",
-                          "수원 (영통·장안·팔달)",
-                          "성남 (분당·수정·중원)",
-                          "안양 동안", "용인 수지",
-                          "의왕", "하남",
+                          "과천", "광명", "수원", "성남",
+                          "안양 동안", "용인 수지", "의왕", "하남",
                         ].map(name => (
                           <span
                             key={name}
-                            className="text-[12px] bg-card border border-border rounded-md px-2 py-1 text-foreground"
+                            className="text-[12px] bg-card border border-border rounded-md px-2 py-1.5 text-foreground text-center"
                           >
                             {name}
                           </span>
                         ))}
                       </div>
+                      <p className="text-[11px] text-muted-foreground mt-2 leading-relaxed">
+                        · 수원: 영통·장안·팔달구<br />
+                        · 성남: 분당·수정·중원구
+                      </p>
                     </div>
                   </div>
                 </div>
