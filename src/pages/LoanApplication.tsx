@@ -92,12 +92,16 @@ const LoanApplication = () => {
             setRepayYears(String(inp.termYears - 1));
           }
           if (!d.existing_homes && inp.housingCount !== undefined) {
+            // 자가진단의 housingCount 는 "이 아파트 포함 후 보유 주택 수"
+            // 대출신청서의 "현재 보유 주택 수" 로 변환:
+            //   거래 후 1주택 → 현재 무주택
+            //   거래 후 2주택 → 현재 1주택
+            //   거래 후 3주택+ → 현재 2주택 이상
             const hc = inp.housingCount;
-            const ft = inp.firstTime;
-            if (hc === 1 && ft) setHousing("무주택");
-            else if (hc === 1) setHousing("1주택");
-            else if (hc === 2) setHousing("2주택");
-            else if (hc >= 3) setHousing("3주택 이상");
+            if (hc === 1) setHousing("무주택");
+            else if (hc === 2) setHousing("1주택");
+            else if (hc === 3) setHousing("2주택");
+            else if (hc >= 4) setHousing("3주택 이상");
           }
         }
 
