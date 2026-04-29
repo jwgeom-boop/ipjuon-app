@@ -165,6 +165,7 @@ const MyPage = () => {
         <div className="space-y-1">
           <p className="text-[11px] text-muted-foreground font-medium px-1 pb-1">대출 관련</p>
           <MenuItem label="📋 내 상담 현황" onClick={() => navigate("/my/consultations")} />
+          <MenuItem label="🏢 단지 안내 (납부방법·관리비)" onClick={() => navigate("/complex-info")} />
           <MenuItem label="잔금대출 계산 결과 보기" onClick={() => {
             const hasResult = sessionStorage.getItem("loanCalcStep3");
             navigate(hasResult ? "/loan/calc/step1" : "/loan");

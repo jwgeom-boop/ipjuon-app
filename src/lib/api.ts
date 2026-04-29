@@ -30,9 +30,31 @@ export interface SigningSlot {
   location: string
 }
 
+export interface B2cMessage {
+  id: string
+  from: 'RESIDENT' | 'CONSULTANT'
+  by?: string
+  text: string
+  at: string
+}
+
+export interface ComplexInfo {
+  complex_name: string
+  mgmt_fee?: { bank?: string; account?: string; holder?: string; timing?: string }
+  mgmt_office?: { location?: string; phone?: string; fax?: string; open_date?: string }
+  payment_methods?: string
+  payment_notes?: string
+  general?: { balance_note?: string; balance_holder?: string; option_bank?: string; option_account?: string; option_holder?: string }
+  union?: { balance_note?: string; balance_holder?: string; option_bank?: string; option_account?: string; option_holder?: string }
+  middle_loan_note?: string
+  sale_price_inquiry_url?: string
+  stamp_duty?: number
+}
+
 export interface MyConsultationDetail extends MyConsultationItem {
   resident_doc_checks?: string | null  // 쉼표 구분 doc id
   resident_doc_checks_at?: string | null
+  b2c_messages?: string | null  // JSON 배열
   complex_name?: string | null
   dong?: string | null
   ho?: string | null
@@ -251,6 +273,30 @@ export const api = {
       throw new Error(err.error || '슬롯 선택 실패')
     }
     return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // 입주민 → 상담사 메시지 전송 (b2c_messages append + 상담사 알림함 표시)
+  sendMessage: async (id: string, phone: string, text: string) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/message`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone, text }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '메시지 전송 실패')
+    }
+    return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // 단지 안내 정보 조회
+  getComplexInfo: async (complexName: string) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/complex?name=${encodeURIComponent(complexName)}`, {
+      headers: HEADERS,
+    })
+    if (res.status === 404) return null
+    if (!res.ok) throw new Error('단지 정보 조회 실패')
+    return res.json() as Promise<ComplexInfo>
   },
 
   // 입주민 준비서류 체크리스트 업데이트 (체크된 doc id 배열 전송)

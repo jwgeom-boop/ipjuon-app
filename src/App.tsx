@@ -24,6 +24,7 @@ import MyConsultations from "./pages/MyConsultations";
 import MyConsultationDetail from "./pages/MyConsultationDetail";
 import MyConsultationRepayment from "./pages/MyConsultationRepayment";
 import Notifications from "./pages/Notifications";
+import ComplexInfo from "./pages/ComplexInfo";
 import { RouteTitle } from "./components/RouteTitle";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/my/consultations/:id/repayment" element={<MyConsultationRepayment />} />
           <Route path="/my/partners" element={<Partners />} />
           <Route path="/notifications" element={<Notifications />} />
+          <Route path="/complex-info" element={<ComplexInfo />} />
           <Route path="/notices" element={<Notices />} />
           <Route path="/admin/consultations" element={<ConsultationDashboard />} />
           <Route path="*" element={<NotFound />} />

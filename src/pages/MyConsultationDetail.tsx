@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import SigningSlotCard from "@/components/SigningSlotCard";
 import ResidentDocChecklist from "@/components/ResidentDocChecklist";
+import B2cMessagesCard from "@/components/B2cMessagesCard";
 
 const STAGES: Array<{ key: MyConsultationStage; label: string; emoji: string }> = [
   { key: "apply",      label: "신청 접수",      emoji: "📥" },
@@ -301,6 +302,16 @@ const MyConsultationDetail = () => {
         {/* 준비서류 체크리스트 — 가심사 결과~자서·실행 단계 (사전 준비 + 진행 추적) */}
         {(display.stage === "result" || display.stage === "executing" || display.stage === "done") && (
           <ResidentDocChecklist
+            data={display}
+            phone={phone}
+            onUpdated={(updated) => setData(updated)}
+            readOnly={isPreview}
+          />
+        )}
+
+        {/* 상담사와 메시지 — 모든 단계에서 노출 (상담 진행 중 소통 채널) */}
+        {display.stage !== "cancel" && (
+          <B2cMessagesCard
             data={display}
             phone={phone}
             onUpdated={(updated) => setData(updated)}
