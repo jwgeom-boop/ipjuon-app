@@ -26,6 +26,8 @@ const LoanApplication = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState<MyConsultationDetail | null>(null);
+  const [diagnosisData, setDiagnosisData] = useState<any>(null);
+  const [diagnosisLocked, setDiagnosisLocked] = useState(true);
 
   // 폼 state — 모두 문자열 (입력 친화적)
   const [contractor, setContractor] = useState("");
@@ -49,11 +51,53 @@ const LoanApplication = () => {
   useEffect(() => {
     let cancelled = false;
     if (!id || !phone) { setLoading(false); return; }
+
+    // 1. 자가진단 결과 (localStorage) 우선 prefill
+    let diag: any = null;
+    try {
+      const raw = localStorage.getItem("ipjuon_loan_calc_result");
+      if (raw) {
+        diag = JSON.parse(raw);
+        setDiagnosisData(diag);
+      }
+    } catch {}
+
+    // 2. 백엔드 상세 조회 → 기존 신청서 값이 있으면 자가진단 prefill 위에 덮어씀
     api.getMyConsultationDetail(id, phone)
       .then(d => {
         if (cancelled || !d) return;
         setDetail(d);
-        // 기존 값 prefill
+
+        // 자가진단에서 prefill (백엔드에 값이 없을 때만)
+        if (diag) {
+          const inp = diag.inputs || {};
+          if (!d.sale_price_amount && inp.price) {
+            setSalePriceMan(fmtNum(String(Math.floor(inp.price / 10000))));
+          }
+          if (!d.desired_loan && diag.appliedLimit) {
+            setDesiredLoanMan(fmtNum(String(Math.floor(diag.appliedLimit / 10000))));
+          }
+          if (!d.annual_income_y1 && inp.income) {
+            setIncomeY1(fmtNum(String(inp.income * 10000))); // income (만원) → 원
+          }
+          if (!d.existing_credit_loan && inp.existingMonthly) {
+            // 월 상환액 → 잔액 추정 (보수적으로 월 상환 × 60개월)
+            setExistingCredit(fmtNum(String(inp.existingMonthly * 10000 * 60)));
+          }
+          if (!d.loan_period && inp.termYears) {
+            setRepayYears(String(inp.termYears - 1));
+          }
+          if (!d.existing_homes && inp.housingCount !== undefined) {
+            const hc = inp.housingCount;
+            const ft = inp.firstTime;
+            if (hc === 1 && ft) setHousing("무주택");
+            else if (hc === 1) setHousing("1주택");
+            else if (hc === 2) setHousing("2주택");
+            else if (hc >= 3) setHousing("3주택 이상");
+          }
+        }
+
+        // 백엔드 값이 있으면 그걸로 덮어씀 (이전 제출본)
         setContractor(d.contractor ?? "");
         if (d.joint_owner_name) {
           setHasJointOwner(true);
@@ -139,6 +183,15 @@ const LoanApplication = () => {
       </div>
 
       <div className="px-4 py-4 space-y-3">
+        {/* 자가진단 이어받음 칩 (있을 때만) */}
+        {diagnosisData && (
+          <DiagnosisChip
+            data={diagnosisData}
+            locked={diagnosisLocked}
+            onToggle={() => setDiagnosisLocked(v => !v)}
+          />
+        )}
+
         {/* 담보물건 (자동 표시) */}
         <Section title="담보물건">
           <p className="text-sm font-medium text-foreground">
@@ -203,6 +256,7 @@ const LoanApplication = () => {
             <Input
               value={desiredLoanMan}
               onChange={e => setDesiredLoanMan(fmtNum(e.target.value))}
+              disabled={diagnosisData && diagnosisLocked}
               placeholder="50000 = 5억"
               className="h-11"
               inputMode="numeric"
@@ -233,6 +287,7 @@ const LoanApplication = () => {
             <Input
               value={salePriceMan}
               onChange={e => setSalePriceMan(fmtNum(e.target.value))}
+              disabled={diagnosisData && diagnosisLocked}
               placeholder="64700 = 6.47억"
               className="h-11"
               inputMode="numeric"
@@ -252,6 +307,7 @@ const LoanApplication = () => {
             <Input
               value={incomeY1}
               onChange={e => setIncomeY1(fmtNum(e.target.value))}
+              disabled={diagnosisData && diagnosisLocked}
               placeholder="예: 81,792,550"
               className="h-11"
               inputMode="numeric"
@@ -345,6 +401,57 @@ function toEokLabel(man: number) {
   if (eok > 0 && rest > 0) return `${eok}억 ${rest.toLocaleString()}만원`;
   if (eok > 0) return `${eok}억원`;
   return `${man.toLocaleString()}만원`;
+}
+
+function DiagnosisChip({ data, locked, onToggle }: { data: any; locked: boolean; onToggle: () => void }) {
+  const verdict = data.verdict;
+  const verdictMeta = verdict === "approved"
+    ? { text: "승인 예상", color: "text-green-700", bg: "bg-green-50 border-green-200" }
+    : verdict === "conditional"
+    ? { text: "조건부", color: "text-orange-700", bg: "bg-orange-50 border-orange-200" }
+    : { text: "불가", color: "text-red-700", bg: "bg-red-50 border-red-200" };
+
+  return (
+    <div className={`rounded-xl border-2 p-3 ${verdictMeta.bg}`}>
+      <div className="flex items-baseline justify-between gap-2 mb-1.5">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-foreground">
+          ✨ 자가진단 이어받음
+        </p>
+        <button
+          onClick={onToggle}
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white border border-border hover:bg-muted transition-colors"
+        >
+          {locked ? "🔒 잠금 — 수정" : "✏️ 수정 중 — 잠금"}
+        </button>
+      </div>
+      <div className="flex items-baseline gap-1.5 flex-wrap text-[12px]">
+        <span className={`font-bold ${verdictMeta.color}`}>{verdictMeta.text}</span>
+        {data.appliedLimit > 0 && (
+          <>
+            <span className="text-muted-foreground">·</span>
+            <span className="font-bold text-foreground">{toEokLabel(Math.floor((data.appliedLimit || 0) / 10000))}</span>
+          </>
+        )}
+        {data.inputs?.termYears && (
+          <>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-foreground">{data.inputs.termYears}년</span>
+          </>
+        )}
+        {data.inputs?.income && (
+          <>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-foreground">연 {toEokLabel(data.inputs.income)}</span>
+          </>
+        )}
+      </div>
+      {locked && (
+        <p className="text-[10px] text-muted-foreground mt-1.5">
+          🔒 잠금 상태에서 자가진단 prefill 값은 수정 불가 — "수정" 클릭 시 변경 가능
+        </p>
+      )}
+    </div>
+  );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

@@ -682,12 +682,24 @@ const LoanCalcDiagnosis = () => {
 
             {/* Action buttons */}
             <div className="space-y-3 pt-2">
+              {/* 자가진단 → 상담신청 매끄러운 연결 (대출신청서 자동 prefill) */}
+              {!isRejected && (
+                <Button
+                  className="w-full h-14 text-base font-bold flex-col gap-0.5"
+                  style={{ background: "linear-gradient(135deg, hsl(var(--primary)), #4A1AAB)" }}
+                  onClick={() => navigate("/my/consultations")}
+                >
+                  <span>📋 이 조건으로 상담신청 →</span>
+                  <span className="text-[11px] font-medium opacity-85">자가진단 정보 그대로 자동 입력</span>
+                </Button>
+              )}
               <Button
-                className="w-full h-12 text-base font-semibold"
-                style={{ background: "linear-gradient(135deg, hsl(var(--accent)), #92400E)" }}
+                variant="outline"
+                className="w-full h-11 text-sm"
+                style={{ background: "linear-gradient(135deg, hsl(var(--accent)), #92400E)", color: "white", border: "none" }}
                 onClick={() => navigate("/loan")}
               >
-                🏦 협약 금융기관 상담 신청하기
+                🏦 협약 은행 둘러보기
               </Button>
               <Button
                 variant="outline"
