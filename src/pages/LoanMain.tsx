@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import BottomTabBar from "@/components/BottomTabBar";
 import { COMPLEX_NAMES, getBanksForComplex, type BankInfo } from "@/data/bankData";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import {
   Select,
   SelectContent,
@@ -28,13 +29,29 @@ const LoanMain = () => {
   });
   const [consultTime, setConsultTime] = useState<string | null>(null);
 
-  const [selectedComplex, setSelectedComplex] = useState<string>(() => {
+  // 단지 자동 인식 — 우선순위: 계약정보 > 현장앱 invite > 첫번째 데모 단지
+  // 자동 인식된 경우 dropdown 숨김 (사용자가 다시 고를 필요 없음)
+  const { autoComplex, lockedReason } = useMemo(() => {
     try {
-      const c = JSON.parse(localStorage.getItem("ipjuon_contract") || "null");
-      if (c?.complex && COMPLEX_NAMES.includes(c.complex)) return c.complex;
+      const contract = JSON.parse(localStorage.getItem(STORAGE_KEYS.contract) || "null");
+      if (contract?.complex) {
+        return { autoComplex: contract.complex as string, lockedReason: "계약정보" };
+      }
     } catch { /* ignore */ }
-    return COMPLEX_NAMES[0];
-  });
+    try {
+      const inviteComplex = localStorage.getItem(STORAGE_KEYS.inviteComplex);
+      if (inviteComplex) {
+        return { autoComplex: inviteComplex, lockedReason: "현장 안내" };
+      }
+    } catch { /* ignore */ }
+    return { autoComplex: null as string | null, lockedReason: "" };
+  }, []);
+
+  const [selectedComplex, setSelectedComplex] = useState<string>(
+    autoComplex || COMPLEX_NAMES[0]
+  );
+
+  const isLocked = !!autoComplex;
 
   const { banks1, banks2 } = useMemo(() => getBanksForComplex(selectedComplex), [selectedComplex]);
 
@@ -90,21 +107,39 @@ const LoanMain = () => {
         <span className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full">{selectedComplex}</span>
       </header>
 
-      <div className="px-4 pt-4">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-foreground whitespace-nowrap">단지 선택</label>
-          <Select value={selectedComplex} onValueChange={handleComplexChange}>
-            <SelectTrigger className="h-10 flex-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {COMPLEX_NAMES.map(name => (
-                <SelectItem key={name} value={name}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* 단지 선택: 자동 인식되면 잠금 표시, 아니면 dropdown */}
+      {isLocked ? (
+        <div className="px-4 pt-4">
+          <div className="flex items-center justify-between rounded-lg bg-primary/5 border border-primary/20 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🏠</span>
+              <div>
+                <p className="text-[10px] text-muted-foreground">단지 ({lockedReason}로 자동 인식)</p>
+                <p className="text-sm font-bold text-foreground">{selectedComplex}</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold text-primary px-2 py-0.5 rounded-full bg-primary/10">
+              🔒 자동
+            </span>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="px-4 pt-4">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-foreground whitespace-nowrap">단지 선택</label>
+            <Select value={selectedComplex} onValueChange={handleComplexChange}>
+              <SelectTrigger className="h-10 flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMPLEX_NAMES.map(name => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
 
       <div className="px-4 py-5 space-y-6">
         <div>
