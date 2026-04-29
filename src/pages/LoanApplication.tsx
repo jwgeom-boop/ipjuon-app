@@ -69,20 +69,24 @@ const LoanApplication = () => {
         setDetail(d);
 
         // 자가진단에서 prefill (백엔드에 값이 없을 때만)
+        // 주의: LoanCalcDiagnosis 의 모든 값(price, appliedLimit, income, existingMonthly)은 만원 단위
         if (diag) {
           const inp = diag.inputs || {};
           if (!d.sale_price_amount && inp.price) {
-            setSalePriceMan(fmtNum(String(Math.floor(inp.price / 10000))));
+            // inp.price 는 만원 → 그대로 사용
+            setSalePriceMan(fmtNum(String(inp.price)));
           }
           if (!d.desired_loan && diag.appliedLimit) {
-            setDesiredLoanMan(fmtNum(String(Math.floor(diag.appliedLimit / 10000))));
+            // appliedLimit 는 만원 → 그대로 사용
+            setDesiredLoanMan(fmtNum(String(diag.appliedLimit)));
           }
           if (!d.annual_income_y1 && inp.income) {
-            setIncomeY1(fmtNum(String(inp.income * 10000))); // income (만원) → 원
+            // income (만원) → 원으로 변환
+            setIncomeY1(fmtNum(String(inp.income * 10000)));
           }
           if (!d.existing_credit_loan && inp.existingMonthly) {
-            // 월 상환액 → 잔액 추정 (보수적으로 월 상환 × 60개월)
-            setExistingCredit(fmtNum(String(inp.existingMonthly * 10000 * 60)));
+            // 월 상환액(만원) → 잔액 추정 (× 60개월 × 10000 = 원)
+            setExistingCredit(fmtNum(String(inp.existingMonthly * 60 * 10000)));
           }
           if (!d.loan_period && inp.termYears) {
             setRepayYears(String(inp.termYears - 1));
@@ -429,7 +433,7 @@ function DiagnosisChip({ data, locked, onToggle }: { data: any; locked: boolean;
         {data.appliedLimit > 0 && (
           <>
             <span className="text-muted-foreground">·</span>
-            <span className="font-bold text-foreground">{toEokLabel(Math.floor((data.appliedLimit || 0) / 10000))}</span>
+            <span className="font-bold text-foreground">{toEokLabel(data.appliedLimit)}</span>
           </>
         )}
         {data.inputs?.termYears && (
