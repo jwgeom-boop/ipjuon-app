@@ -100,6 +100,7 @@ const MyConsultations = () => {
 
       <div className="px-4 py-4 space-y-5">
         {!loading && items.length > 0 && <PushOptInBanner />}
+        {!loading && items.length > 0 && <LoanApplicationBanner items={items} />}
 
         {loading && items.length === 0 && (
           <div className="text-center py-16 text-sm text-muted-foreground">불러오는 중...</div>
@@ -145,6 +146,62 @@ const MyConsultations = () => {
     </div>
   );
 };
+
+function LoanApplicationBanner({ items }: { items: MyConsultationItem[] }) {
+  const navigate = useNavigate();
+  // 작성 가능한 단계의 상담건만 (apply/consulting/result 까지 — 가심사 결과 후에도 보완 가능)
+  const eligible = items.filter(i =>
+    i.stage === "apply" || i.stage === "consulting" || i.stage === "result"
+  );
+  if (eligible.length === 0) return null;
+
+  // 누군가 한 번이라도 제출했는지 (같은 phone 의 모든 상담건이 동일 정보 공유 → 하나라도 있으면 적용된 것)
+  const submitted = items.find(i => i.loan_application_at);
+
+  // 클릭 시 진입할 상담건 (apply 우선)
+  const target = eligible[0];
+
+  if (submitted) {
+    const submittedDate = new Date(submitted.loan_application_at!);
+    const dateLabel = `${submittedDate.getMonth() + 1}/${submittedDate.getDate()}`;
+    return (
+      <button
+        onClick={() => navigate(`/my/consultations/${target.id}/loan-application`)}
+        className="w-full text-left bg-green-50 border border-green-200 rounded-xl p-3.5 flex items-center gap-3 hover:bg-green-100/70 transition-colors"
+      >
+        <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+          <span className="text-base">✅</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-green-900">대출신청서 제출 완료</p>
+          <p className="text-[12px] text-green-700/80 mt-0.5">
+            {dateLabel} 제출 · 모든 협약 은행에 적용됨 · 탭하여 수정
+          </p>
+        </div>
+        <ChevronRight className="w-4 h-4 text-green-700/60 shrink-0" />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => navigate(`/my/consultations/${target.id}/loan-application`)}
+      className="w-full text-left rounded-xl p-3.5 flex items-center gap-3 hover:opacity-90 transition-opacity"
+      style={{ background: "linear-gradient(135deg, hsl(var(--primary)), #7c3aed)" }}
+    >
+      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+        <span className="text-xl">📋</span>
+      </div>
+      <div className="flex-1 min-w-0 text-white">
+        <p className="text-sm font-bold">대출신청서 작성하기</p>
+        <p className="text-[12px] text-white/85 mt-0.5">
+          한 번 작성 → {eligible.length}개 은행 자동 공유 · 가심사 빠르게
+        </p>
+      </div>
+      <ChevronRight className="w-4 h-4 text-white shrink-0" />
+    </button>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

@@ -22,6 +22,7 @@ export interface MyConsultationItem {
   stage_changed_at?: string | null
   created_at: string
   canceled_reason?: string | null
+  loan_application_at?: string | null
 }
 
 export interface SigningSlot {
