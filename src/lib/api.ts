@@ -51,10 +51,47 @@ export interface ComplexInfo {
   stamp_duty?: number
 }
 
+export interface LoanApplicationData {
+  contractor?: string
+  resident_no?: string
+  joint_owner_name?: string
+  joint_owner_rrn?: string
+  joint_owner_tel?: string
+  desired_loan?: string  // 만원 단위 문자열
+  loan_period?: string   // "1년거치 29년 상환" 자유 문자열
+  deferment?: string
+  annual_income_y1?: number
+  annual_income_y2?: number
+  existing_credit_loan?: number
+  existing_collateral_loan?: number
+  notes?: string
+  sale_price_amount?: number
+  desired_date?: string
+  existing_homes?: string
+}
+
 export interface MyConsultationDetail extends MyConsultationItem {
   resident_doc_checks?: string | null  // 쉼표 구분 doc id
   resident_doc_checks_at?: string | null
   b2c_messages?: string | null  // JSON 배열
+  // 대출신청서 (가심사) 정보
+  contractor?: string | null
+  resident_no_masked?: string | null  // 마스킹된 주민번호 (조회 시)
+  joint_owner_name?: string | null
+  joint_owner_rrn_masked?: string | null
+  joint_owner_tel?: string | null
+  desired_loan?: string | null
+  loan_period?: string | null
+  deferment?: string | null
+  annual_income_y1?: number | null
+  annual_income_y2?: number | null
+  existing_credit_loan?: number | null
+  existing_collateral_loan?: number | null
+  notes?: string | null
+  sale_price_amount?: number | null
+  desired_date?: string | null
+  existing_homes?: string | null
+  loan_application_at?: string | null
   complex_name?: string | null
   dong?: string | null
   ho?: string | null
@@ -273,6 +310,20 @@ export const api = {
       throw new Error(err.error || '슬롯 선택 실패')
     }
     return res.json() as Promise<MyConsultationDetail>
+  },
+
+  // 대출신청서 (가심사용) 제출 — 1번 작성 → 모든 활성 은행 자동 공유
+  submitLoanApplication: async (id: string, phone: string, data: LoanApplicationData) => {
+    const res = await fetch(`${API_BASE_URL}/b2c/consultations/${id}/loan-application`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ phone, ...data }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || '대출신청서 제출 실패')
+    }
+    return res.json() as Promise<{ ok: boolean; updated_count: number; detail: MyConsultationDetail }>
   },
 
   // 입주민 → 상담사 메시지 전송 (b2c_messages append + 상담사 알림함 표시)

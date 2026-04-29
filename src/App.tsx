@@ -25,6 +25,7 @@ import MyConsultationDetail from "./pages/MyConsultationDetail";
 import MyConsultationRepayment from "./pages/MyConsultationRepayment";
 import Notifications from "./pages/Notifications";
 import ComplexInfo from "./pages/ComplexInfo";
+import LoanApplication from "./pages/LoanApplication";
 import { RouteTitle } from "./components/RouteTitle";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
           <Route path="/my/consultations" element={<MyConsultations />} />
           <Route path="/my/consultations/:id" element={<MyConsultationDetail />} />
           <Route path="/my/consultations/:id/repayment" element={<MyConsultationRepayment />} />
+          <Route path="/my/consultations/:id/loan-application" element={<LoanApplication />} />
           <Route path="/my/partners" element={<Partners />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/complex-info" element={<ComplexInfo />} />

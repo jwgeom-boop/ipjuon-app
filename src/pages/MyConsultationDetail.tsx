@@ -276,6 +276,26 @@ const MyConsultationDetail = () => {
           </Card>
         )}
 
+        {/* 대출신청서 진입점 — 가심사 전 단계에서 강조 */}
+        {(display.stage === "apply" || display.stage === "consulting") && !isPreview && (
+          <button
+            onClick={() => navigate(`/my/consultations/${data.id}/loan-application`)}
+            className="w-full text-left bg-primary/5 border-2 border-primary/30 rounded-xl p-4 hover:bg-primary/10 transition-colors"
+          >
+            <div className="flex items-baseline justify-between">
+              <p className="text-sm font-bold text-primary">📋 대출신청서 작성하기</p>
+              <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                data.loan_application_at ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+              }`}>
+                {data.loan_application_at ? "✓ 제출됨" : "미제출"}
+              </span>
+            </div>
+            <p className="text-[12px] text-muted-foreground mt-1.5 leading-relaxed">
+              한 번 작성하면 협약 모든 은행에 자동 공유됩니다. 가심사가 빠르게 진행됩니다.
+            </p>
+          </button>
+        )}
+
         {/* 가심사 결과 카드 (result 이상) */}
         {(display.stage === "result" || display.stage === "executing" || display.stage === "done") && (display.approved_amount || display.approved_rate) && (
           <Card title="🎯 가심사 결과" accent="purple">
