@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronRight, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -162,14 +162,14 @@ const MyPage = () => {
           )}
         </div>
 
+        {/* 저장된 자가진단 결과 카드 */}
+        <SavedDiagnosisCard onRecalc={() => navigate("/loan/calc/step1")} />
+
         <div className="space-y-1">
           <p className="text-[11px] text-muted-foreground font-medium px-1 pb-1">대출 관련</p>
           <MenuItem label="📋 내 상담 현황" onClick={() => navigate("/my/consultations")} />
           <MenuItem label="🏢 단지 안내 (납부방법·관리비)" onClick={() => navigate("/complex-info")} />
-          <MenuItem label="잔금대출 계산 결과 보기" onClick={() => {
-            const hasResult = sessionStorage.getItem("loanCalcStep3");
-            navigate(hasResult ? "/loan/calc/step1" : "/loan");
-          }} />
+          <MenuItem label="🔍 잔금대출 자가진단" onClick={() => navigate("/loan/calc/step1")} />
           <MenuItem label="잔금대출 준비 체크리스트" onClick={() => navigate("/home")} />
         </div>
         <div className="border-t border-border" />
@@ -208,6 +208,59 @@ const MyPage = () => {
     </div>
   );
 };
+
+function SavedDiagnosisCard({ onRecalc }: { onRecalc: () => void }) {
+  const [data, setData] = useState<any>(null);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("ipjuon_loan_calc_result");
+      if (raw) setData(JSON.parse(raw));
+    } catch {}
+  }, []);
+  if (!data) return null;
+
+  const verdict = data.verdict;
+  const verdictMeta = verdict === "approved"
+    ? { text: "승인 예상", color: "#059669", bg: "linear-gradient(135deg, #059669, #065F46)" }
+    : verdict === "conditional"
+    ? { text: "조건부 승인", color: "#D97706", bg: "linear-gradient(135deg, #D97706, #92400E)" }
+    : { text: "대출 불가", color: "#DC2626", bg: "linear-gradient(135deg, #DC2626, #991B1B)" };
+
+  const savedAt = new Date(data.savedAt);
+  const dateLabel = `${savedAt.getMonth() + 1}/${savedAt.getDate()} ${String(savedAt.getHours()).padStart(2, "0")}:${String(savedAt.getMinutes()).padStart(2, "0")}`;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between px-1">
+        <h2 className="text-sm font-bold text-foreground">잔금대출 자가진단 결과</h2>
+        <span className="text-[10px] text-muted-foreground">저장 {dateLabel}</span>
+      </div>
+      <div className="rounded-[14px] px-4 py-4 text-white" style={{ background: verdictMeta.bg }}>
+        <p className="text-[11px] opacity-80">최근 진단 결과</p>
+        <div className="flex items-baseline justify-between mt-0.5 gap-2">
+          <p className="text-base font-extrabold">{verdictMeta.text}</p>
+          {verdict !== "rejected" && data.appliedLimit > 0 && (
+            <p className="text-2xl font-extrabold">{toEok(data.appliedLimit)}</p>
+          )}
+        </div>
+        {verdict !== "rejected" && data.monthly > 0 && (
+          <div className="mt-2 pt-2 border-t border-white/20 grid grid-cols-2 gap-x-3 gap-y-0.5 text-[12px]">
+            <div className="flex justify-between"><span className="opacity-70">LTV</span><span>{toEok(data.ltvLimit || 0)}</span></div>
+            <div className="flex justify-between"><span className="opacity-70">DSR 최대</span><span>{toEok(data.dsrLimit || 0)}</span></div>
+            <div className="flex justify-between"><span className="opacity-70">월 상환</span><span>{(data.monthly || 0).toLocaleString()}만</span></div>
+            <div className="flex justify-between"><span className="opacity-70">총 이자</span><span>{toEok(Math.max(0, data.totalInterest || 0))}</span></div>
+          </div>
+        )}
+      </div>
+      <button
+        onClick={onRecalc}
+        className="w-full text-center text-sm text-primary font-medium py-2 hover:bg-muted/40 rounded-lg transition-colors"
+      >
+        🔄 다시 계산하기
+      </button>
+    </div>
+  );
+}
 
 function MenuItem({ label, onClick }: { label: string; onClick: () => void }) {
   return (

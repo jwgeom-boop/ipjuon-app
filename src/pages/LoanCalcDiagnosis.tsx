@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -200,6 +200,29 @@ const LoanCalcDiagnosis = () => {
 
   const canNext = [false, step1Valid, step2Valid, step3Valid, step4Valid][step];
   const progress = step <= 4 ? step * 25 : 100;
+
+  // Step 5 (결과) 진입 시 자동 저장 — MyPage 카드에서 재확인 가능
+  useEffect(() => {
+    if (step !== 5) return;
+    try {
+      localStorage.setItem("ipjuon_loan_calc_result", JSON.stringify({
+        savedAt: new Date().toISOString(),
+        verdict,
+        appliedLimit,
+        monthly,
+        totalInterest,
+        ltvLimit,
+        dsrLimit,
+        ltvPct,
+        priceTier,
+        inputs: {
+          price, location, regulated, firstTime, housingCount,
+          income, hasExistingLoan, existingMonthly, financialSector,
+          inputRate, termYears, desired,
+        },
+      }));
+    } catch {}
+  }, [step, verdict, appliedLimit, monthly, totalInterest, ltvLimit, dsrLimit, ltvPct, priceTier, price, location, regulated, firstTime, housingCount, income, hasExistingLoan, existingMonthly, financialSector, inputRate, termYears, desired]);
 
   const goNext = () => { if (step < 5) setStep(step + 1); };
   const goPrev = () => { if (step > 1) setStep(step - 1); };
